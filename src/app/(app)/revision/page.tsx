@@ -1,7 +1,9 @@
 import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getDueRevisions } from "@/server/queries/revision";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RevisionRow } from "@/components/revision/revision-row";
+import { RevisionEmptyPopup } from "@/components/revision/revision-empty-popup";
 
 const GROUPS = [
   { key: "critical" as const, label: "🔴 Critical — 3+ days overdue", },
@@ -11,10 +13,15 @@ const GROUPS = [
 
 export default async function RevisionPage() {
   const { profile } = await requireUser();
-  const revisions = await getDueRevisions(profile.id);
+  const [revisions, studySessionCount] = await Promise.all([
+    getDueRevisions(profile.id),
+    prisma.studySession.count({ where: { userId: profile.id } }),
+  ]);
+  const isBrandNew = revisions.total === 0 && studySessionCount === 0;
 
   return (
     <div className="space-y-6">
+      {isBrandNew && <RevisionEmptyPopup />}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Revision</h1>
         <p className="text-sm text-muted-foreground mt-1">{revisions.total} topics due for revision today.</p>
@@ -23,7 +30,9 @@ export default async function RevisionPage() {
       {revisions.total === 0 ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground text-center py-10">
-            Nothing due right now — nice work staying on top of it.
+            {isBrandNew
+              ? "Nothing here yet — study a topic first to start tracking revisions."
+              : "Nothing due right now — nice work staying on top of it."}
           </CardContent>
         </Card>
       ) : (

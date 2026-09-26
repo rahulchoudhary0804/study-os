@@ -32,7 +32,7 @@ export async function updateChapterAction(input: z.infer<typeof updateChapterSch
   await requireAdmin();
   const { id, ...data } = updateChapterSchema.parse(input);
   await prisma.chapter.update({ where: { id }, data });
-  revalidatePath("/admin");
+  revalidatePath("/admin/content");
 }
 
 const updateTopicSchema = z.object({
@@ -46,7 +46,7 @@ export async function updateTopicAction(input: z.infer<typeof updateTopicSchema>
   await requireAdmin();
   const { id, ...data } = updateTopicSchema.parse(input);
   await prisma.topic.update({ where: { id }, data });
-  revalidatePath("/admin");
+  revalidatePath("/admin/content");
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +115,7 @@ export async function importSyllabusJsonAction(jsonText: string) {
     }
   }
 
+  revalidatePath("/admin/content");
   revalidatePath("/admin");
   return { chapterCount, topicCount };
 }

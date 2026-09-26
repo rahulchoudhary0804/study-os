@@ -20,6 +20,7 @@ export default async function SettingsPage() {
           examDate: profile.examDate ? profile.examDate.toISOString().slice(0, 10) : null,
           dailyHourGoal: profile.dailyHourGoal,
           minStreakMinutes: profile.minStreakMinutes,
+          minStreakMinutesUpdatedAt: profile.minStreakMinutesUpdatedAt ? profile.minStreakMinutesUpdatedAt.toISOString() : null,
           preferredStudyTime: profile.preferredStudyTime,
         }}
       />

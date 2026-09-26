@@ -26,17 +26,17 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, mobile: true },
-  { href: "/study", label: "Study", icon: BookOpen, mobile: true },
+  { href: "/study", label: "Study", icon: BookOpen },
   { href: "/plan", label: "Today's Plan", icon: Target, mobile: true },
   { href: "/subjects", label: "Subjects", icon: Library },
-  { href: "/ncert", label: "NCERT", icon: BookMarked },
+  { href: "/ncert", label: "NCERT", icon: BookMarked, mobile: true },
   { href: "/notes", label: "Notes", icon: NotebookPen },
   { href: "/practice", label: "Practice", icon: FlaskConical },
-  { href: "/revision", label: "Revision", icon: RefreshCw, mobile: true },
+  { href: "/revision", label: "Revision", icon: RefreshCw },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/streak", label: "Streak", icon: Flame },
   { href: "/planner", label: "AI Planner", icon: Bot },
-  { href: "/assistant", label: "AI Assistant", icon: MessageCircle },
+  { href: "/assistant", label: "AI Assistant", icon: MessageCircle, mobile: true },
   { href: "/export", label: "PDF Export", icon: FileDown },
-  { href: "/settings", label: "Settings", icon: Settings, mobile: true },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];

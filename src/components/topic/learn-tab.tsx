@@ -8,13 +8,16 @@ import { Sparkles, Save, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { generateNotesAction, saveAINotesAsNoteAction } from "@/server/actions/ai";
 import type { AINotes } from "@/lib/ai/schemas";
+import { AIContent } from "@/components/ai/ai-content";
 
 function List({ items }: { items: string[] }) {
   if (!items || items.length === 0) return null;
   return (
     <ul className="list-disc pl-5 space-y-1 text-sm">
       {items.map((it, i) => (
-        <li key={i}>{it}</li>
+        <li key={i}>
+          <AIContent text={it} className="inline" />
+        </li>
       ))}
     </ul>
   );
@@ -127,7 +130,9 @@ export function LearnTab({ topicId, topicName }: { topicId: string; topicName: s
             <CardHeader>
               <CardTitle className="text-base">Concept</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm">{notes.conceptExplanation}</CardContent>
+            <CardContent>
+              <AIContent text={notes.conceptExplanation} />
+            </CardContent>
           </Card>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -193,9 +198,9 @@ export function LearnTab({ topicId, topicName }: { topicId: string; topicName: s
               <CardHeader>
                 <CardTitle className="text-base text-blue-700">JEE Main Focus</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <p>{notes.jeeFocus.conceptualUnderstanding}</p>
-                <p className="text-muted-foreground">{notes.jeeFocus.numericalApproach}</p>
+              <CardContent className="space-y-2">
+                <AIContent text={notes.jeeFocus.conceptualUnderstanding} />
+                <AIContent text={notes.jeeFocus.numericalApproach} className="text-muted-foreground" />
                 <List items={notes.jeeFocus.traps} />
               </CardContent>
             </Card>
@@ -203,8 +208,8 @@ export function LearnTab({ topicId, topicName }: { topicId: string; topicName: s
               <CardHeader>
                 <CardTitle className="text-base text-red-700">RBSE Board Focus</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <p>{notes.rbseFocus.boardOrientedExplanation}</p>
+              <CardContent className="space-y-2">
+                <AIContent text={notes.rbseFocus.boardOrientedExplanation} />
                 <List items={notes.rbseFocus.importantDerivations} />
                 <List items={notes.rbseFocus.answerWritingPoints} />
               </CardContent>
@@ -215,7 +220,9 @@ export function LearnTab({ topicId, topicName }: { topicId: string; topicName: s
             <CardHeader>
               <CardTitle className="text-base">Quick Revision Summary</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm">{notes.quickRevisionSummary}</CardContent>
+            <CardContent>
+              <AIContent text={notes.quickRevisionSummary} />
+            </CardContent>
           </Card>
         </div>
       )}

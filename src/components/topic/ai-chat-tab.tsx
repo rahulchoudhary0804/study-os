@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { explainAction } from "@/server/actions/ai";
 import { Bot, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AIContent } from "@/components/ai/ai-content";
 
 type Mode = "default" | "simple" | "hinglish" | "hint";
 interface Msg {
@@ -76,11 +77,11 @@ export function AIChatTab({ topicId }: { topicId: string }) {
               )}
               <div
                 className={cn(
-                  "rounded-lg px-3.5 py-2.5 text-sm max-w-[80%] whitespace-pre-wrap",
-                  m.role === "USER" ? "bg-primary text-primary-foreground" : "bg-muted"
+                  "rounded-lg px-3.5 py-2.5 text-sm max-w-[80%]",
+                  m.role === "USER" ? "bg-primary text-primary-foreground whitespace-pre-wrap" : "bg-muted"
                 )}
               >
-                {m.content}
+                {m.role === "ASSISTANT" ? <AIContent text={m.content} /> : m.content}
                 {m.followUps && m.followUps.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {m.followUps.map((f, j) => (

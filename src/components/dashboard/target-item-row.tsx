@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toggleTargetItemAction } from "@/server/actions/targets";
 import { cn } from "@/lib/utils";
+import { SwapTopicButton } from "@/components/plan/swap-topic-button";
 
 export function TargetItemRow({
   id,
@@ -12,12 +13,14 @@ export function TargetItemRow({
   subLabel,
   isDone,
   href,
+  topicId,
 }: {
   id: string;
   label: string;
   subLabel?: string;
   isDone: boolean;
   href?: string;
+  topicId?: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -39,6 +42,7 @@ export function TargetItemRow({
         )}
         {subLabel && <p className="text-xs text-muted-foreground">{subLabel}</p>}
       </div>
+      {topicId && !isDone && <SwapTopicButton itemId={id} />}
     </div>
   );
 }

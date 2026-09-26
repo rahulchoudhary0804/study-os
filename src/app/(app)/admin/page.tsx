@@ -1,67 +1,59 @@
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AdminChapterRow } from "@/components/admin/chapter-row";
-import { ImportForm } from "@/components/admin/import-form";
+import { getAdminAnalytics } from "@/server/queries/admin-analytics";
+import { Users, Flame, Clock, Target, CheckCircle2 } from "lucide-react";
 
-export default async function AdminPage() {
-  const { profile } = await requireUser();
-  if (!profile.isAdmin) redirect("/dashboard");
+export default async function AdminOverviewPage() {
+  const analytics = await getAdminAnalytics();
 
-  const subjects = await prisma.subject.findMany({
-    include: {
-      exam: true,
-      chapters: { orderBy: { order: "asc" }, include: { _count: { select: { topics: true } } } },
+  const stats = [
+    { icon: Users, label: "Total users", value: analytics.totalUsers, color: "text-blue-600 bg-blue-500/10" },
+    { icon: Flame, label: "Active streaks", value: analytics.activeStreakUsers, color: "text-orange-600 bg-orange-500/10" },
+    { icon: Clock, label: "Total study hours", value: `${analytics.totalStudyHours}h`, color: "text-violet-600 bg-violet-500/10" },
+    { icon: Target, label: "Questions attempted", value: analytics.totalQuestionsAttempted, color: "text-primary bg-primary/10" },
+    {
+      icon: CheckCircle2,
+      label: "Overall accuracy",
+      value: analytics.overallAccuracy !== null ? `${analytics.overallAccuracy}%` : "—",
+      color: "text-green-600 bg-green-500/10",
     },
-    orderBy: [{ exam: { order: "asc" } }, { order: "asc" }],
-  });
+  ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Admin — Content Management</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Edit chapter priority and mark chapters deleted from the syllabus. Topic-level edits and adding
-          brand-new chapters/topics are done via JSON import below.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+        <p className="text-sm text-muted-foreground mt-1">Cross-user analytics, computed live from real activity.</p>
       </div>
 
-      <ImportForm />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {stats.map((s) => (
+          <Card key={s.label}>
+            <CardContent className="pt-6">
+              <div className={`flex items-center justify-center size-9 rounded-lg mb-3 ${s.color}`}>
+                <s.icon className="size-4.5" />
+              </div>
+              <div className="text-2xl font-semibold">{s.value}</div>
+              <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {subjects.map((s) => (
-        <Card key={s.id}>
+      {analytics.examEnrollment.length > 0 && (
+        <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              {s.exam.name} → {s.name}
-            </CardTitle>
+            <CardTitle className="text-base">Exam enrollment</CardTitle>
           </CardHeader>
-          <CardContent>
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-xs text-muted-foreground border-b">
-                  <th className="pb-2 font-medium">Chapter</th>
-                  <th className="pb-2 font-medium">Topics</th>
-                  <th className="pb-2 font-medium">Priority</th>
-                  <th className="pb-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {s.chapters.map((c) => (
-                  <AdminChapterRow
-                    key={c.id}
-                    id={c.id}
-                    name={c.name}
-                    priority={c.priority}
-                    isDeleted={c.isDeleted}
-                    topicCount={c._count.topics}
-                  />
-                ))}
-              </tbody>
-            </table>
+          <CardContent className="flex flex-wrap gap-4">
+            {analytics.examEnrollment.map((e) => (
+              <div key={e.examName}>
+                <p className="text-xl font-semibold">{e.count}</p>
+                <p className="text-xs text-muted-foreground">{e.examName}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
-      ))}
+      )}
     </div>
   );
 }

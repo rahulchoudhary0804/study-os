@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PwaRegister } from "@/components/pwa-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +19,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Study OS — AI-Powered JEE Main + RBSE Class 12 Study Tracker",
   description: "Plan. Study. Practice. Improve.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4338ca",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -38,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </a>
             {children}
             <Toaster richColors position="top-right" />
+            <PwaRegister />
           </TooltipProvider>
         </ThemeProvider>
       </body>

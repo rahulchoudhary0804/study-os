@@ -57,6 +57,30 @@ export async function addTargetItemAction(input: z.infer<typeof addItemSchema>) 
   revalidatePath("/plan");
 }
 
+const swapItemSchema = z.object({ itemId: z.string().uuid(), newTopicId: z.string().uuid() });
+
+/** Swaps a scheduled item's topic for a different one the student would rather study instead. */
+export async function swapTargetItemAction(input: z.infer<typeof swapItemSchema>) {
+  const { profile } = await requireUserAction();
+  const { itemId, newTopicId } = swapItemSchema.parse(input);
+
+  const item = await prisma.dailyTargetItem.findUnique({ where: { id: itemId }, include: { dailyTarget: true } });
+  if (!item || item.dailyTarget.userId !== profile.id) throw new Error("NOT_FOUND");
+
+  const topic = await prisma.topic.findUniqueOrThrow({
+    where: { id: newTopicId },
+    select: { name: true, chapterId: true, chapter: { select: { subjectId: true } } },
+  });
+
+  await prisma.dailyTargetItem.update({
+    where: { id: itemId },
+    data: { topicId: newTopicId, chapterId: topic.chapterId, subjectId: topic.chapter.subjectId, label: topic.name },
+  });
+  revalidatePath("/dashboard");
+  revalidatePath("/plan");
+  revalidatePath("/planner");
+}
+
 export async function deleteTargetItemAction(itemId: string) {
   const { profile } = await requireUserAction();
   const item = await prisma.dailyTargetItem.findUnique({ where: { id: itemId }, include: { dailyTarget: true } });

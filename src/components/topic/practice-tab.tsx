@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,10 @@ import { toast } from "sonner";
 import { generateQuestionsAction, saveGeneratedQuestionsAction } from "@/server/actions/ai";
 import { recordAttemptAction } from "@/server/actions/questions";
 import type { AIQuestion } from "@/lib/ai/schemas";
-import { Sparkles, CheckCircle2, XCircle } from "lucide-react";
+import { Sparkles, CheckCircle2, XCircle, Gauge } from "lucide-react";
+import { AIContent } from "@/components/ai/ai-content";
+import { computeEffortNeeded, type EffortAttempt } from "@/lib/domain/effort";
+import { Progress } from "@/components/ui/progress";
 
 export interface SavedQuestion {
   id: string;
@@ -49,7 +52,9 @@ function QuestionCard({
           {badge}
           <Badge variant="outline">{difficulty}</Badge>
         </div>
-        <p className="text-sm font-medium">{question}</p>
+        <div className="text-sm font-medium">
+          <AIContent text={question} />
+        </div>
         {options && options.length > 0 && (
           <div className="grid gap-1.5">
             {options.map((opt, i) => {
@@ -90,7 +95,7 @@ function QuestionCard({
               )}
               Answer: {correctAnswer}
             </p>
-            {explanation && <p className="text-muted-foreground">{explanation}</p>}
+            {explanation && <AIContent text={explanation} className="text-muted-foreground" />}
           </div>
         )}
       </CardContent>
@@ -105,6 +110,9 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
   const [generated, setGenerated] = useState<AIQuestion[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [batchAttempts, setBatchAttempts] = useState<EffortAttempt[]>([]);
+
+  const effort = useMemo(() => computeEffortNeeded(batchAttempts), [batchAttempts]);
 
   function generate() {
     startTransition(async () => {
@@ -112,6 +120,7 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
         const result = (await generateQuestionsAction({ topicId, examTarget, difficulty, count })) as AIQuestion[];
         setGenerated(result);
         setSaved(false);
+        setBatchAttempts([]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
         toast.error(msg.includes("AI_NOT_CONFIGURED") ? "AI isn't configured — add GEMINI_API_KEY." : "Couldn't generate questions.");
@@ -165,7 +174,7 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[3, 5, 10].map((n) => (
+                {[3, 5, 10, 25, 50, 100].map((n) => (
                   <SelectItem key={n} value={String(n)}>
                     {n} questions
                   </SelectItem>
@@ -187,6 +196,24 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
               {saved ? "Saved" : "Save all to question bank"}
             </Button>
           </div>
+
+          {batchAttempts.length > 0 && (
+            <Card className="border-primary/30 bg-primary/[0.03]">
+              <CardContent className="pt-5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Gauge className="size-4 text-primary" /> Effort check
+                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {batchAttempts.length} of {generated.length} answered
+                  </span>
+                </div>
+                <Progress value={(batchAttempts.length / generated.length) * 100} className="h-1.5" />
+                <p className="text-sm text-muted-foreground">{effort.verdict}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {generated.map((q, i) => (
             <QuestionCard
               key={i}
@@ -200,6 +227,7 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
                   <Sparkles className="size-3 mr-1" /> AI Generated
                 </Badge>
               }
+              onAttempt={(isCorrect) => setBatchAttempts((prev) => [...prev, { isCorrect, difficulty: q.difficulty }])}
             />
           ))}
         </div>

@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { updateSettingsAction } from "@/server/actions/settings";
 import { toast } from "sonner";
 
+const STREAK_LOCK_DAYS = 7;
+
 export function SettingsForm({
   exams,
   initial,
@@ -20,6 +22,7 @@ export function SettingsForm({
     examDate: string | null;
     dailyHourGoal: number;
     minStreakMinutes: number;
+    minStreakMinutesUpdatedAt: string | null;
     preferredStudyTime: string | null;
   };
 }) {
@@ -30,6 +33,11 @@ export function SettingsForm({
   const [minStreakMinutes, setMinStreakMinutes] = useState(initial.minStreakMinutes);
   const [preferredStudyTime, setPreferredStudyTime] = useState(initial.preferredStudyTime ?? "none");
   const [isPending, startTransition] = useTransition();
+
+  const unlocksAt = initial.minStreakMinutesUpdatedAt
+    ? new Date(new Date(initial.minStreakMinutesUpdatedAt).getTime() + STREAK_LOCK_DAYS * 86400_000)
+    : null;
+  const streakLocked = unlocksAt !== null && unlocksAt > new Date();
 
   return (
     <Card>
@@ -94,24 +102,41 @@ export function SettingsForm({
               type="number"
               min={5}
               max={480}
+              disabled={streakLocked}
               value={minStreakMinutes}
               onChange={(e) => setMinStreakMinutes(Number(e.target.value))}
             />
+            {streakLocked && (
+              <p className="text-xs text-muted-foreground">
+                Locked until {unlocksAt!.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} —
+                changing this too often would let you game your streak.
+              </p>
+            )}
           </div>
         </div>
         <Button
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await updateSettingsAction({
-                fullName,
-                targetExamId: targetExamId === "none" ? null : targetExamId,
-                examDate: examDate || null,
-                dailyHourGoal,
-                minStreakMinutes,
-                preferredStudyTime: preferredStudyTime === "none" ? null : preferredStudyTime,
-              });
-              toast.success("Settings saved");
+              try {
+                await updateSettingsAction({
+                  fullName,
+                  targetExamId: targetExamId === "none" ? null : targetExamId,
+                  examDate: examDate || null,
+                  dailyHourGoal,
+                  minStreakMinutes,
+                  preferredStudyTime: preferredStudyTime === "none" ? null : preferredStudyTime,
+                });
+                toast.success("Settings saved");
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : "";
+                if (msg.startsWith("STREAK_LOCKED:")) {
+                  const date = new Date(msg.split(":").slice(1).join(":"));
+                  toast.error(`You can change the streak threshold again on ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`);
+                } else {
+                  toast.error("Couldn't save settings.");
+                }
+              }
             })
           }
         >

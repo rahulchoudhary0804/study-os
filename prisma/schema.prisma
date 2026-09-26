@@ -26,6 +26,7 @@ model Profile {
   examDate          DateTime?
   dailyHourGoal     Float    @default(4)
   minStreakMinutes  Int      @default(25)
+  minStreakMinutesUpdatedAt DateTime?
   preferredStudyTime String? // e.g. "morning" | "evening" | "night"
   aiProviderOverride String? // optional per-user override of AI_PROVIDER
   isAdmin           Boolean  @default(false)
@@ -506,6 +507,8 @@ enum AIGenerationType {
   PLAN
   EXPLAIN
   FLASHCARDS
+  INSIGHT
+  FULL_PLAN
 }
 
 model AIGeneration {

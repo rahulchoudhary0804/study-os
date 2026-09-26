@@ -10,6 +10,7 @@ import { LearnTab } from "@/components/topic/learn-tab";
 import { PracticeTab } from "@/components/topic/practice-tab";
 import { RevisionActions } from "@/components/topic/revision-actions";
 import { AIChatTab } from "@/components/topic/ai-chat-tab";
+import { TopicInsight } from "@/components/topic/topic-insight";
 import { StudyTimer } from "@/components/timer/study-timer";
 import { format } from "date-fns";
 
@@ -110,6 +111,7 @@ export default async function TopicPage({
                 <CardTitle className="text-base">About this topic</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
+                <TopicInsight topicId={topic.id} />
                 <p>{topic.description || "No description yet."}</p>
                 <div className="grid sm:grid-cols-2 gap-3 pt-2">
                   <div>

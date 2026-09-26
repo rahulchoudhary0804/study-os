@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "katex/dist/katex.min.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -49,76 +50,92 @@
 }
 
 :root {
-  /* A friendly, professional indigo replaces the default monochrome theme —
-     student-facing product, not an internal admin tool. */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.205 0.015 265);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.015 265);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.015 265);
+  /* Neobrutalism + glassmorphism: bold near-black borders and hard offset
+     shadows (neobrutalist structure) on translucent, blurred surfaces
+     (glassmorphic fill), floating over a soft indigo gradient backdrop. */
+  --background: oklch(0.97 0.015 265);
+  --foreground: oklch(0.18 0.02 265);
+  --card: oklch(1 0 0 / 62%);
+  --card-foreground: oklch(0.18 0.02 265);
+  --popover: oklch(1 0 0 / 82%);
+  --popover-foreground: oklch(0.18 0.02 265);
   --primary: oklch(0.5 0.19 265);
   --primary-foreground: oklch(0.98 0.01 265);
-  --secondary: oklch(0.965 0.01 265);
-  --secondary-foreground: oklch(0.3 0.03 265);
-  --muted: oklch(0.965 0.008 265);
-  --muted-foreground: oklch(0.5 0.02 265);
-  --accent: oklch(0.94 0.03 265);
-  --accent-foreground: oklch(0.3 0.05 265);
+  --secondary: oklch(0.94 0.03 265 / 70%);
+  --secondary-foreground: oklch(0.25 0.03 265);
+  --muted: oklch(0.94 0.02 265 / 55%);
+  --muted-foreground: oklch(0.42 0.03 265);
+  --accent: oklch(0.9 0.05 265 / 65%);
+  --accent-foreground: oklch(0.25 0.05 265);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.01 265);
-  --input: oklch(0.91 0.01 265);
-  --ring: oklch(0.6 0.15 265);
+  --border: oklch(0.18 0.03 265);
+  --input: oklch(0.18 0.03 265 / 60%);
+  --ring: oklch(0.5 0.19 265);
   --chart-1: oklch(0.55 0.19 265);
   --chart-2: oklch(0.65 0.17 165);
   --chart-3: oklch(0.68 0.18 45);
   --chart-4: oklch(0.6 0.2 300);
   --chart-5: oklch(0.65 0.2 25);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.985 0.003 265);
-  --sidebar-foreground: oklch(0.205 0.015 265);
+  --radius: 0.7rem;
+  --nb-shadow-color: var(--border);
+  --sidebar: oklch(1 0 0 / 55%);
+  --sidebar-foreground: oklch(0.18 0.02 265);
   --sidebar-primary: oklch(0.5 0.19 265);
   --sidebar-primary-foreground: oklch(0.98 0.01 265);
-  --sidebar-accent: oklch(0.955 0.015 265);
-  --sidebar-accent-foreground: oklch(0.3 0.05 265);
-  --sidebar-border: oklch(0.91 0.01 265);
-  --sidebar-ring: oklch(0.6 0.15 265);
+  --sidebar-accent: oklch(0.9 0.05 265 / 70%);
+  --sidebar-accent-foreground: oklch(0.25 0.05 265);
+  --sidebar-border: oklch(0.18 0.03 265);
+  --sidebar-ring: oklch(0.5 0.19 265);
 }
 
 .dark {
-  /* Same indigo brand hue (265) as light mode, re-tuned for a dark surface
-     instead of falling back to shadcn's default monochrome dark palette. */
-  --background: oklch(0.16 0.012 265);
+  /* Same indigo brand hue (265) as light mode, re-tuned for a dark glass
+     surface — light, high-contrast borders instead of black ones. */
+  --background: oklch(0.14 0.02 265);
   --foreground: oklch(0.96 0.008 265);
-  --card: oklch(0.205 0.014 265);
+  --card: oklch(0.24 0.03 265 / 55%);
   --card-foreground: oklch(0.96 0.008 265);
-  --popover: oklch(0.205 0.014 265);
+  --popover: oklch(0.2 0.03 265 / 88%);
   --popover-foreground: oklch(0.96 0.008 265);
   --primary: oklch(0.72 0.16 265);
   --primary-foreground: oklch(0.16 0.02 265);
-  --secondary: oklch(0.27 0.02 265);
+  --secondary: oklch(0.3 0.03 265 / 65%);
   --secondary-foreground: oklch(0.96 0.008 265);
-  --muted: oklch(0.24 0.015 265);
-  --muted-foreground: oklch(0.68 0.02 265);
-  --accent: oklch(0.3 0.04 265);
+  --muted: oklch(0.28 0.025 265 / 55%);
+  --muted-foreground: oklch(0.72 0.03 265);
+  --accent: oklch(0.34 0.05 265 / 65%);
   --accent-foreground: oklch(0.96 0.02 265);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.65 0.15 265);
+  --border: oklch(0.92 0.02 265);
+  --input: oklch(0.92 0.02 265 / 50%);
+  --ring: oklch(0.72 0.16 265);
   --chart-1: oklch(0.72 0.16 265);
   --chart-2: oklch(0.7 0.15 165);
   --chart-3: oklch(0.72 0.16 45);
   --chart-4: oklch(0.68 0.18 300);
   --chart-5: oklch(0.7 0.18 25);
-  --sidebar: oklch(0.19 0.014 265);
+  --nb-shadow-color: var(--border);
+  --sidebar: oklch(0.2 0.03 265 / 55%);
   --sidebar-foreground: oklch(0.96 0.008 265);
   --sidebar-primary: oklch(0.72 0.16 265);
   --sidebar-primary-foreground: oklch(0.16 0.02 265);
-  --sidebar-accent: oklch(0.27 0.02 265);
+  --sidebar-accent: oklch(0.34 0.05 265 / 65%);
   --sidebar-accent-foreground: oklch(0.96 0.02 265);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.65 0.15 265);
+  --sidebar-border: oklch(0.92 0.02 265);
+  --sidebar-ring: oklch(0.72 0.16 265);
+}
+
+@utility shadow-nb-sm {
+  box-shadow: 3px 3px 0px 0px var(--nb-shadow-color);
+}
+@utility shadow-nb {
+  box-shadow: 5px 5px 0px 0px var(--nb-shadow-color);
+}
+@utility shadow-nb-lg {
+  box-shadow: 8px 8px 0px 0px var(--nb-shadow-color);
+}
+@utility shadow-nb-active {
+  box-shadow: 1px 1px 0px 0px var(--nb-shadow-color);
 }
 
 @layer base {
@@ -127,6 +144,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 15% 8%, oklch(0.85 0.1 265 / 35%), transparent 45%),
+      radial-gradient(circle at 85% 15%, oklch(0.8 0.12 25 / 22%), transparent 45%),
+      radial-gradient(circle at 50% 90%, oklch(0.82 0.1 165 / 22%), transparent 50%);
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image: radial-gradient(circle at 15% 8%, oklch(0.32 0.08 265 / 50%), transparent 45%),
+      radial-gradient(circle at 85% 15%, oklch(0.3 0.1 25 / 30%), transparent 45%),
+      radial-gradient(circle at 50% 90%, oklch(0.3 0.08 165 / 30%), transparent 50%);
   }
   html {
     @apply font-sans;

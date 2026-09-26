@@ -64,6 +64,24 @@ export const AIPlanSchema = z.object({
 });
 export type AIPlan = z.infer<typeof AIPlanSchema>;
 
+export const AIFullPlanNarrativeSchema = z.object({
+  rationale: z.string(),
+  weeklyFocus: z.array(z.string()),
+  priorityOrder: z.array(z.string()),
+});
+export type AIFullPlanNarrative = z.infer<typeof AIFullPlanNarrativeSchema>;
+
+// ---------------------------------------------------------------------------
+// AI Topic Insight — difficulty rating + easiest approach for the Overview tab
+// ---------------------------------------------------------------------------
+export const AITopicInsightSchema = z.object({
+  hardnessLevel: z.enum(["EASY", "MEDIUM", "HARD", "VERY_HARD"]),
+  hardnessReason: z.string(),
+  easiestApproach: z.string(),
+  estimatedTimeToMaster: z.string(),
+});
+export type AITopicInsight = z.infer<typeof AITopicInsightSchema>;
+
 // ---------------------------------------------------------------------------
 // AI Assistant / Explain — Section 20
 // ---------------------------------------------------------------------------

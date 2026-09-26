@@ -153,6 +153,7 @@ export default async function DashboardPage() {
                   label={item.label}
                   subLabel={item.topic ? `${item.topic.chapter.subject.name} → ${item.topic.chapter.name}` : undefined}
                   isDone={item.isDone}
+                  topicId={item.topicId ?? undefined}
                   href={
                     item.topic
                       ? `/study/${item.topic.chapter.subject.exam.slug}/${item.topic.chapter.subject.slug}/${item.topic.chapter.slug}/${item.topic.slug}`

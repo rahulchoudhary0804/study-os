@@ -14,9 +14,20 @@ const settingsSchema = z.object({
   preferredStudyTime: z.string().optional().nullable(),
 });
 
+const STREAK_LOCK_DAYS = 7;
+
 export async function updateSettingsAction(input: z.infer<typeof settingsSchema>) {
   const { profile } = await requireUserAction();
   const parsed = settingsSchema.parse(input);
+
+  const changingStreakMinutes = parsed.minStreakMinutes !== profile.minStreakMinutes;
+  if (changingStreakMinutes && profile.minStreakMinutesUpdatedAt) {
+    const unlocksAt = new Date(profile.minStreakMinutesUpdatedAt);
+    unlocksAt.setDate(unlocksAt.getDate() + STREAK_LOCK_DAYS);
+    if (unlocksAt > new Date()) {
+      throw new Error(`STREAK_LOCKED:${unlocksAt.toISOString()}`);
+    }
+  }
 
   await prisma.profile.update({
     where: { id: profile.id },
@@ -26,6 +37,7 @@ export async function updateSettingsAction(input: z.infer<typeof settingsSchema>
       examDate: parsed.examDate ? new Date(parsed.examDate) : null,
       dailyHourGoal: parsed.dailyHourGoal,
       minStreakMinutes: parsed.minStreakMinutes,
+      minStreakMinutesUpdatedAt: changingStreakMinutes ? new Date() : undefined,
       preferredStudyTime: parsed.preferredStudyTime,
     },
   });

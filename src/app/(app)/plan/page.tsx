@@ -1,27 +1,26 @@
+import Link from "next/link";
 import { startOfDay } from "date-fns";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { TargetItemRow } from "@/components/dashboard/target-item-row";
 import { AddTargetForm } from "@/components/plan/add-target-form";
-import { AIPlannerPanel } from "@/components/planner/ai-planner-panel";
+import { Bot, ArrowRight } from "lucide-react";
 
 export default async function PlanPage() {
   const { profile } = await requireUser();
   const today = startOfDay(new Date());
 
-  const [target, exams] = await Promise.all([
-    prisma.dailyTarget.findUnique({
-      where: { userId_date: { userId: profile.id, date: today } },
-      include: {
-        items: {
-          orderBy: { order: "asc" },
-          include: { topic: { include: { chapter: { include: { subject: { include: { exam: true } } } } } } },
-        },
+  const target = await prisma.dailyTarget.findUnique({
+    where: { userId_date: { userId: profile.id, date: today } },
+    include: {
+      items: {
+        orderBy: { order: "asc" },
+        include: { topic: { include: { chapter: { include: { subject: { include: { exam: true } } } } } } },
       },
-    }),
-    prisma.exam.findMany({ where: { isActive: true }, orderBy: { order: "asc" } }),
-  ]);
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -51,6 +50,7 @@ export default async function PlanPage() {
                     : undefined
                 }
                 isDone={item.isDone}
+                topicId={item.topicId ?? undefined}
                 href={
                   item.topic
                     ? `/study/${item.topic.chapter.subject.exam.slug}/${item.topic.chapter.subject.slug}/${item.topic.chapter.slug}/${item.topic.slug}`
@@ -67,10 +67,26 @@ export default async function PlanPage() {
         </CardContent>
       </Card>
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Generate today&apos;s plan with AI</h2>
-        <AIPlannerPanel exams={exams} />
-      </div>
+      <Card className="border-primary/30 bg-primary/[0.03]">
+        <CardContent className="pt-6 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 text-primary shrink-0">
+              <Bot className="size-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Let AI build your day</p>
+              <p className="text-sm text-muted-foreground">
+                Or generate a full schedule all the way to your exam date.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm">
+            <Link href="/planner">
+              Open AI Planner <ArrowRight className="size-3.5 ml-1" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
