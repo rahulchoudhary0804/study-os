@@ -1,0 +1,171 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Sparkles, CalendarCheck } from "lucide-react";
+import { generatePlanAction, applyPlanToTodayAction } from "@/server/actions/ai";
+import type { AIPlan } from "@/lib/ai/schemas";
+
+export function AIPlannerPanel({ exams }: { exams: { id: string; name: string }[] }) {
+  const router = useRouter();
+  const [examId, setExamId] = useState(exams[0]?.id ?? "");
+  const [hours, setHours] = useState(4);
+  const [level, setLevel] = useState("");
+  const [preferredTime, setPreferredTime] = useState("");
+  const [priorities, setPriorities] = useState("");
+  const [plan, setPlan] = useState<AIPlan | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [applied, setApplied] = useState(false);
+
+  function generate() {
+    if (!examId) return;
+    startTransition(async () => {
+      try {
+        const result = (await generatePlanAction({
+          examId,
+          availableHoursPerDay: hours,
+          preparationLevel: level || undefined,
+          preferredStudyTime: preferredTime || undefined,
+          priorities: priorities || undefined,
+        })) as AIPlan;
+        setPlan(result);
+        setApplied(false);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "AI_FAILED";
+        toast.error(msg.includes("AI_NOT_CONFIGURED") ? "AI isn't configured — add GEMINI_API_KEY." : "Couldn't generate a plan right now.");
+      }
+    });
+  }
+
+  async function apply() {
+    if (!plan) return;
+    await applyPlanToTodayAction({ rationale: plan.rationale, items: plan.dailyPlan.map((i) => ({ label: i.label, startTime: i.startTime, endTime: i.endTime, topicName: i.topicName })) });
+    setApplied(true);
+    toast.success("Applied to today's targets");
+    router.refresh();
+  }
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your inputs</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Target exam</Label>
+            <Select value={examId} onValueChange={setExamId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {exams.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Available hours today</Label>
+            <Input type="number" min={0.5} max={16} step={0.5} value={hours} onChange={(e) => setHours(Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Preparation level (optional)</Label>
+            <Input placeholder="e.g. beginner, revising, near-final" value={level} onChange={(e) => setLevel(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Preferred study time (optional)</Label>
+            <Input placeholder="e.g. morning, evening" value={preferredTime} onChange={(e) => setPreferredTime(e.target.value)} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Anything else to prioritize? (optional)</Label>
+            <Textarea placeholder="e.g. focus more on Chemistry this week" value={priorities} onChange={(e) => setPriorities(e.target.value)} />
+          </div>
+          <div className="sm:col-span-2">
+            <Button onClick={generate} disabled={isPending || !examId}>
+              <Sparkles className="size-4 mr-1.5" /> {isPending ? "Generating your plan…" : "Generate Plan"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {plan && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              <Sparkles className="size-3 mr-1" /> AI Generated — based on your real progress data
+            </Badge>
+            <Button size="sm" onClick={apply} disabled={applied}>
+              <CalendarCheck className="size-3.5 mr-1.5" /> {applied ? "Applied" : "Apply to Today's Targets"}
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Why this plan</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm">{plan.rationale}</CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Today&apos;s schedule</CardTitle>
+            </CardHeader>
+            <CardContent className="divide-y">
+              {plan.dailyPlan.map((item, i) => (
+                <div key={i} className="py-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    {(item.startTime || item.endTime) && (
+                      <span className="text-xs text-muted-foreground">
+                        {item.startTime}–{item.endTime}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{item.reason}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Weekly focus</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  {plan.weeklyFocus.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Priority order</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="list-decimal pl-5 space-y-1 text-sm">
+                  {plan.priorityOrder.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

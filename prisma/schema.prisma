@@ -1,0 +1,568 @@
+// Study OS — Prisma schema
+// DB: Supabase Postgres. Auth: Supabase Auth (auth.users, not modeled here).
+// `Profile.id` equals the Supabase auth.users.id (uuid) — kept in sync by a
+// Postgres trigger, see prisma/sql/001_profile_trigger_and_rls.sql
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// USER
+// ---------------------------------------------------------------------------
+
+model Profile {
+  id                String   @id @db.Uuid
+  email             String   @unique
+  fullName          String?
+  targetExamId      String?  @db.Uuid
+  targetExam        Exam?    @relation(fields: [targetExamId], references: [id])
+  examDate          DateTime?
+  dailyHourGoal     Float    @default(4)
+  minStreakMinutes  Int      @default(25)
+  preferredStudyTime String? // e.g. "morning" | "evening" | "night"
+  aiProviderOverride String? // optional per-user override of AI_PROVIDER
+  isAdmin           Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  topicProgress   TopicProgress[]
+  studySessions   StudySession[]
+  dailyTargets    DailyTarget[]
+  revisions       Revision[]
+  questionAttempts QuestionAttempt[]
+  questionsCreated Question[]
+  notes           Note[]
+  flashcards      Flashcard[]
+  aiConversations AIConversation[]
+  aiGenerations   AIGeneration[]
+  streak          Streak?
+  studyDayLogs    StudyDayLog[]
+  achievements    UserAchievement[]
+
+  @@map("profiles")
+}
+
+// ---------------------------------------------------------------------------
+// SYLLABUS HIERARCHY  (Exam -> Subject -> Chapter -> Topic -> Subtopic)
+// ---------------------------------------------------------------------------
+
+model Exam {
+  id          String    @id @default(uuid()) @db.Uuid
+  slug        String    @unique
+  name        String
+  description String?
+  examDate    DateTime?
+  isActive    Boolean   @default(true)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  subjects Subject[]
+  profiles Profile[]
+
+  @@map("exams")
+}
+
+model Subject {
+  id     String @id @default(uuid()) @db.Uuid
+  examId String @db.Uuid
+  exam   Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  slug  String
+  name  String
+  order Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chapters Chapter[]
+
+  @@unique([examId, slug])
+  @@map("subjects")
+}
+
+model Chapter {
+  id        String  @id @default(uuid()) @db.Uuid
+  subjectId String  @db.Uuid
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  slug        String
+  name        String
+  priority    Int     @default(3) // 1=Extremely Important .. 4=Lower Priority
+  description String?
+  importance  String? // free-text "why this priority"
+  order       Int     @default(0)
+  sourceRef   String? // citation / reference metadata
+  isDeleted   Boolean @default(false) // officially removed from syllabus
+
+  // chapter-wide research context (seeded from verified syllabus research;
+  // individual Topics below can carry their own narrower AI-generated content)
+  pyqTrend        Json?   // { freq, historical, pattern, difficulty }
+  mustKnow        Json?   // string[]
+  questionPatterns Json?  // string[] ("PYQ-style question types to practice")
+  commonMistakes  Json?   // string[]
+  prerequisites   Json?   // string[]
+  connectedChapters Json? // string[]
+
+  // Official NCERT chapter PDFs this chapter corresponds to — a chapter here
+  // sometimes spans 2 NCERT chapters (e.g. "Electrostatics" = Electric
+  // Charges & Fields + Electrostatic Potential & Capacitance), hence an array.
+  // Only ever populated with real, verified ncert.nic.in URLs — left empty
+  // for chapters NCERT doesn't currently publish (e.g. rationalized-out
+  // topics, or Class 11 content referenced for prerequisite context).
+  ncertLinks Json? // { title: string, url: string }[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topics Topic[]
+
+  @@unique([subjectId, slug])
+  @@map("chapters")
+}
+
+model Topic {
+  id        String  @id @default(uuid()) @db.Uuid
+  chapterId String  @db.Uuid
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  slug        String
+  name        String
+  priority    Int     @default(3)
+  description String?
+  order       Int     @default(0)
+  isDeleted   Boolean @default(false)
+
+  // structured content — stored as JSON so it's data-driven, not hardcoded per subject
+  formulae         Json? // string[]
+  concepts         Json? // string[]
+  questionPatterns Json? // string[]
+  pyqTrend         Json? // { freq, historical, pattern, difficulty, confidence }
+  mustKnow         Json? // string[]
+  commonMistakes   Json? // string[]
+  prerequisites    Json? // string[] of topic names/slugs
+  connectedTopics  Json? // string[] of topic names/slugs
+  sourceRef        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subtopics        Subtopic[]
+  progress         TopicProgress[]
+  studySessions    StudySession[]
+  dailyTargetItems DailyTargetItem[]
+  revisions        Revision[]
+  questions        Question[]
+  notes            Note[]
+  flashcards       Flashcard[]
+  aiConversations  AIConversation[]
+  aiGenerations    AIGeneration[]
+
+  @@unique([chapterId, slug])
+  @@map("topics")
+}
+
+model Subtopic {
+  id      String @id @default(uuid()) @db.Uuid
+  topicId String @db.Uuid
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  name  String
+  notes String?
+  order Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("subtopics")
+}
+
+// ---------------------------------------------------------------------------
+// PROGRESS TRACKING
+// ---------------------------------------------------------------------------
+
+enum ProgressStatus {
+  NOT_STARTED
+  LEARNING
+  PRACTICING
+  COMPLETED
+  NEEDS_REVISION
+}
+
+model TopicProgress {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @db.Uuid
+  user      Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId   String         @db.Uuid
+  topic     Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  status    ProgressStatus @default(NOT_STARTED)
+  confidence Int?          // 1-5 self-rated
+  updatedAt DateTime       @updatedAt
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, topicId])
+  @@map("topic_progress")
+}
+
+// ---------------------------------------------------------------------------
+// STUDY TIMER / SESSIONS
+// ---------------------------------------------------------------------------
+
+enum SessionType {
+  FOCUS
+  SHORT_BREAK
+  LONG_BREAK
+}
+
+model StudySession {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  user      Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId String?     @db.Uuid
+  chapterId String?     @db.Uuid
+  topicId   String?     @db.Uuid
+  topic     Topic?      @relation(fields: [topicId], references: [id])
+
+  sessionType     SessionType @default(FOCUS)
+  startedAt       DateTime
+  endedAt         DateTime
+  durationSeconds Int
+  notes           String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, startedAt])
+  @@map("study_sessions")
+}
+
+model StudyDayLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  totalMinutes Int     @default(0)
+  targetMet   Boolean  @default(false)
+
+  @@unique([userId, date])
+  @@map("study_day_logs")
+}
+
+// ---------------------------------------------------------------------------
+// DAILY TARGETS
+// ---------------------------------------------------------------------------
+
+model DailyTarget {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  user           Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime @db.Date
+  generatedByAI  Boolean  @default(false)
+  aiRationale    String?  // short explanation from the AI planner, if generated
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items DailyTargetItem[]
+
+  @@unique([userId, date])
+  @@map("daily_targets")
+}
+
+model DailyTargetItem {
+  id            String      @id @default(uuid()) @db.Uuid
+  dailyTargetId String      @db.Uuid
+  dailyTarget   DailyTarget @relation(fields: [dailyTargetId], references: [id], onDelete: Cascade)
+  subjectId     String?     @db.Uuid
+  chapterId     String?     @db.Uuid
+  topicId       String?     @db.Uuid
+  topic         Topic?      @relation(fields: [topicId], references: [id])
+
+  label     String
+  startTime String? // "08:00"
+  endTime   String? // "09:30"
+  isDone    Boolean @default(false)
+  order     Int     @default(0)
+
+  @@map("daily_target_items")
+}
+
+// ---------------------------------------------------------------------------
+// REVISION ENGINE
+// ---------------------------------------------------------------------------
+
+enum RevisionStatus {
+  DUE
+  SNOOZED
+  DONE
+}
+
+model Revision {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @db.Uuid
+  user         Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId      String         @db.Uuid
+  topic        Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  stage        Int            @default(0) // index into interval sequence [0,1,3,7,14,30]
+  dueDate      DateTime
+  status       RevisionStatus @default(DUE)
+  lastRevisedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  history RevisionHistory[]
+
+  @@unique([userId, topicId])
+  @@index([userId, dueDate])
+  @@map("revisions")
+}
+
+model RevisionHistory {
+  id               String   @id @default(uuid()) @db.Uuid
+  revisionId       String   @db.Uuid
+  revision         Revision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  revisedAt        DateTime @default(now())
+  accuracyAtReview Float?
+  notes            String?
+
+  @@map("revision_history")
+}
+
+// ---------------------------------------------------------------------------
+// QUESTIONS / PYQs / ATTEMPTS
+// ---------------------------------------------------------------------------
+
+enum QuestionSource {
+  AI_GENERATED
+  USER_CREATED
+  PYQ_METADATA
+}
+
+enum QuestionType {
+  MCQ
+  NUMERICAL
+  SUBJECTIVE
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Question {
+  id      String  @id @default(uuid()) @db.Uuid
+  topicId String  @db.Uuid
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  source         QuestionSource
+  examYear       Int?
+  questionText   String
+  questionType   QuestionType
+  options        Json? // string[] for MCQ
+  correctAnswer  String?
+  explanation    String?
+  difficulty     Difficulty @default(MEDIUM)
+  marks          Int?
+  conceptTested  String?
+  sourceRef      String? // citation for PYQ_METADATA; "Gemini" etc for AI_GENERATED
+
+  createdByUserId String? @db.Uuid
+  createdByUser   Profile? @relation(fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  attempts QuestionAttempt[]
+
+  @@index([topicId])
+  @@map("questions")
+}
+
+model QuestionAttempt {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  user             Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId       String   @db.Uuid
+  question         Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  isCorrect        Boolean?
+  userAnswer       String?
+  timeTakenSeconds Int?
+  notes            String?
+  attemptedAt      DateTime @default(now())
+
+  @@index([userId, questionId])
+  @@map("question_attempts")
+}
+
+// ---------------------------------------------------------------------------
+// NOTES / FLASHCARDS
+// ---------------------------------------------------------------------------
+
+model Note {
+  id      String  @id @default(uuid()) @db.Uuid
+  userId  String  @db.Uuid
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId String? @db.Uuid
+  topic   Topic?  @relation(fields: [topicId], references: [id])
+
+  title         String
+  content       String // markdown
+  isAIGenerated Boolean @default(false)
+  isPinned      Boolean @default(false)
+  tags          Json?   // string[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flashcards Flashcard[]
+
+  @@index([userId])
+  @@map("notes")
+}
+
+model Flashcard {
+  id      String  @id @default(uuid()) @db.Uuid
+  userId  String  @db.Uuid
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId String? @db.Uuid
+  topic   Topic?  @relation(fields: [topicId], references: [id])
+  noteId  String? @db.Uuid
+  note    Note?   @relation(fields: [noteId], references: [id])
+
+  question String
+  answer   String
+
+  createdAt DateTime @default(now())
+
+  reviews FlashcardReview[]
+
+  @@map("flashcards")
+}
+
+enum FlashcardRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+model FlashcardReview {
+  id          String          @id @default(uuid()) @db.Uuid
+  flashcardId String          @db.Uuid
+  flashcard   Flashcard       @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  rating      FlashcardRating
+  reviewedAt  DateTime        @default(now())
+  nextDueAt   DateTime
+
+  @@map("flashcard_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// AI
+// ---------------------------------------------------------------------------
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model AIConversation {
+  id            String  @id @default(uuid()) @db.Uuid
+  userId        String  @db.Uuid
+  user          Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contextTopicId String? @db.Uuid
+  contextTopic  Topic?  @relation(fields: [contextTopicId], references: [id])
+  title         String  @default("New conversation")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages AIMessage[]
+
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id             String         @id @default(uuid()) @db.Uuid
+  conversationId String         @db.Uuid
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String
+  createdAt      DateTime       @default(now())
+
+  @@map("ai_messages")
+}
+
+enum AIGenerationType {
+  NOTES
+  QUESTIONS
+  PLAN
+  EXPLAIN
+  FLASHCARDS
+}
+
+model AIGeneration {
+  id       String            @id @default(uuid()) @db.Uuid
+  userId   String            @db.Uuid
+  user     Profile           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type     AIGenerationType
+  topicId  String?           @db.Uuid
+  topic    Topic?            @relation(fields: [topicId], references: [id])
+
+  prompt       String
+  responseJson Json
+  provider     String // e.g. "gemini"
+  model        String // e.g. "gemini-flash-lite-latest"
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, type, topicId])
+  @@map("ai_generations")
+}
+
+// ---------------------------------------------------------------------------
+// STREAK / ACHIEVEMENTS
+// ---------------------------------------------------------------------------
+
+model Streak {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  user           Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate DateTime? @db.Date
+  updatedAt      DateTime @updatedAt
+
+  @@map("streaks")
+}
+
+model Achievement {
+  id          String @id @default(uuid()) @db.Uuid
+  key         String @unique
+  name        String
+  description String
+  icon        String
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  user          Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String      @db.Uuid
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}

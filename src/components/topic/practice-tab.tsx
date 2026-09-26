@@ -1,0 +1,230 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { generateQuestionsAction, saveGeneratedQuestionsAction } from "@/server/actions/ai";
+import { recordAttemptAction } from "@/server/actions/questions";
+import type { AIQuestion } from "@/lib/ai/schemas";
+import { Sparkles, CheckCircle2, XCircle } from "lucide-react";
+
+export interface SavedQuestion {
+  id: string;
+  questionText: string;
+  questionType: string;
+  options: unknown;
+  correctAnswer: string | null;
+  explanation: string | null;
+  difficulty: string;
+  source: string;
+}
+
+function QuestionCard({
+  question,
+  options,
+  correctAnswer,
+  explanation,
+  difficulty,
+  badge,
+  onAttempt,
+}: {
+  question: string;
+  options?: string[];
+  correctAnswer?: string | null;
+  explanation?: string | null;
+  difficulty: string;
+  badge: React.ReactNode;
+  onAttempt?: (isCorrect: boolean) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <Card>
+      <CardContent className="pt-5 space-y-3">
+        <div className="flex items-center justify-between">
+          {badge}
+          <Badge variant="outline">{difficulty}</Badge>
+        </div>
+        <p className="text-sm font-medium">{question}</p>
+        {options && options.length > 0 && (
+          <div className="grid gap-1.5">
+            {options.map((opt, i) => {
+              const isCorrect = revealed && opt === correctAnswer;
+              const isWrongPick = revealed && selected === opt && opt !== correctAnswer;
+              return (
+                <button
+                  key={i}
+                  onClick={() => !revealed && setSelected(opt)}
+                  className={`text-left text-sm rounded-md border px-3 py-2 transition-colors ${
+                    selected === opt ? "border-primary" : "border-muted"
+                  } ${isCorrect ? "bg-green-50 border-green-400" : ""} ${isWrongPick ? "bg-red-50 border-red-400" : ""}`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!revealed ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setRevealed(true);
+              if (onAttempt) onAttempt(selected === correctAnswer);
+            }}
+          >
+            Reveal Answer
+          </Button>
+        ) : (
+          <div className="text-sm rounded-md bg-muted/60 p-3 space-y-1">
+            <p className="flex items-center gap-1.5 font-medium">
+              {selected === correctAnswer || !options ? (
+                <CheckCircle2 className="size-4 text-green-600" />
+              ) : (
+                <XCircle className="size-4 text-red-500" />
+              )}
+              Answer: {correctAnswer}
+            </p>
+            {explanation && <p className="text-muted-foreground">{explanation}</p>}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function PracticeTab({ topicId, savedQuestions }: { topicId: string; savedQuestions: SavedQuestion[] }) {
+  const [examTarget, setExamTarget] = useState<"RBSE" | "JEE_MAIN" | "MIXED">("MIXED");
+  const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD" | "MIXED">("MIXED");
+  const [count, setCount] = useState(5);
+  const [generated, setGenerated] = useState<AIQuestion[] | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
+
+  function generate() {
+    startTransition(async () => {
+      try {
+        const result = (await generateQuestionsAction({ topicId, examTarget, difficulty, count })) as AIQuestion[];
+        setGenerated(result);
+        setSaved(false);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "AI_FAILED";
+        toast.error(msg.includes("AI_NOT_CONFIGURED") ? "AI isn't configured — add GEMINI_API_KEY." : "Couldn't generate questions.");
+      }
+    });
+  }
+
+  async function saveAll() {
+    if (!generated) return;
+    await saveGeneratedQuestionsAction({ topicId, questions: generated });
+    setSaved(true);
+    toast.success("Saved to your question bank");
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="size-4" /> Generate Practice Questions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            AI-generated original practice questions — not real past papers.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Select value={examTarget} onValueChange={(v) => setExamTarget(v as never)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="RBSE">RBSE Board style</SelectItem>
+                <SelectItem value="JEE_MAIN">JEE Main style</SelectItem>
+                <SelectItem value="MIXED">Mixed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as never)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="EASY">Easy</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HARD">Hard</SelectItem>
+                <SelectItem value="MIXED">Mixed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={String(count)} onValueChange={(v) => setCount(Number(v))}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[3, 5, 10].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} questions
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={generate} disabled={isPending}>
+              {isPending ? "Generating…" : "Generate"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {generated && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">{generated.length} generated questions</p>
+            <Button size="sm" onClick={saveAll} disabled={saved}>
+              {saved ? "Saved" : "Save all to question bank"}
+            </Button>
+          </div>
+          {generated.map((q, i) => (
+            <QuestionCard
+              key={i}
+              question={q.question}
+              options={q.options}
+              correctAnswer={q.correctAnswer}
+              explanation={q.explanation}
+              difficulty={q.difficulty}
+              badge={
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  <Sparkles className="size-3 mr-1" /> AI Generated
+                </Badge>
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Saved question bank ({savedQuestions.length})</p>
+        {savedQuestions.length === 0 && (
+          <p className="text-sm text-muted-foreground">No saved questions for this topic yet.</p>
+        )}
+        {savedQuestions.map((q) => (
+          <QuestionCard
+            key={q.id}
+            question={q.questionText}
+            options={Array.isArray(q.options) ? (q.options as string[]) : undefined}
+            correctAnswer={q.correctAnswer}
+            explanation={q.explanation}
+            difficulty={q.difficulty}
+            badge={
+              <Badge variant="outline">{q.source === "AI_GENERATED" ? "AI Generated" : q.source === "PYQ_METADATA" ? "PYQ" : "User Created"}</Badge>
+            }
+            onAttempt={(isCorrect) => recordAttemptAction({ questionId: q.id, isCorrect })}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
