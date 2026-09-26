@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { signupSchema, type SignupInput } from "@/lib/validations/auth";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const {
@@ -24,17 +26,24 @@ export default function SignupPage() {
   const onSubmit = async (values: SignupInput) => {
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: {
-        data: { full_name: values.fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { data: { full_name: values.fullName } },
     });
     setLoading(false);
     if (error) {
       toast.error(error.message);
+      return;
+    }
+    // With email confirmation disabled in Supabase, signUp returns a live
+    // session immediately — no email round-trip, no rate limit. If a project
+    // still has confirmation required, session is null and we fall back to
+    // the "check your email" state below.
+    if (data.session) {
+      toast.success("Account created");
+      router.push("/dashboard");
+      router.refresh();
       return;
     }
     setSent(true);
@@ -83,6 +92,11 @@ export default function SignupPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Input id="confirmPassword" type="password" autoComplete="new-password" {...register("confirmPassword")} />
+              {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account…" : "Sign up"}
