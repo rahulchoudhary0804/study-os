@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, X } from "lucide-react";
+import { Download, X, Share } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -11,26 +11,45 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISS_KEY = "study-os-install-dismissed-at";
 const DISMISS_DAYS = 7;
+// Covers phones and tablets (including portrait iPad); desktop stays reactive-only.
+const MOBILE_OR_TABLET_QUERY = "(max-width: 1024px)";
+
+function isStandalone(): boolean {
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
+}
+
+function isIOS(): boolean {
+  const ua = navigator.userAgent;
+  const isAppleTouchUA = /iphone|ipad|ipod/i.test(ua);
+  // iPadOS 13+ reports as "MacIntel" but is touch-capable, unlike real Macs.
+  const isIPadOS13Plus = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return isAppleTouchUA || isIPadOS13Plus;
+}
+
+function wasDismissedRecently(): boolean {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY);
+    const dismissedAt = raw ? Number(raw) : null;
+    return !!dismissedAt && Date.now() - dismissedAt < DISMISS_DAYS * 86400_000;
+  } catch {
+    return false;
+  }
+}
 
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [iosMode, setIosMode] = useState(false);
 
   useEffect(() => {
+    if (isStandalone() || wasDismissedRecently()) return;
+
     function onBeforeInstallPrompt(e: Event) {
       e.preventDefault();
-
-      let dismissedAt: number | null = null;
-      try {
-        const raw = localStorage.getItem(DISMISS_KEY);
-        dismissedAt = raw ? Number(raw) : null;
-      } catch {
-        // localStorage unavailable (private mode etc.) — just show the prompt.
-      }
-      const recentlyDismissed = dismissedAt && Date.now() - dismissedAt < DISMISS_DAYS * 86400_000;
-      if (recentlyDismissed) return;
-
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setPreparing(false);
       setVisible(true);
     }
 
@@ -41,6 +60,21 @@ export function PwaInstallPrompt() {
 
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
+
+    // On phones/tablets, show the prompt right away instead of waiting on the
+    // browser's own engagement heuristics for beforeinstallprompt to fire.
+    if (window.matchMedia(MOBILE_OR_TABLET_QUERY).matches) {
+      if (isIOS()) {
+        // No install API exists on iOS Safari — show tap-through instructions instead.
+        setIosMode(true);
+        setVisible(true);
+      } else {
+        // Show immediately; the Install button waits for the real prompt to be ready.
+        setPreparing(true);
+        setVisible(true);
+      }
+    }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onAppInstalled);
@@ -73,15 +107,23 @@ export function PwaInstallPrompt() {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">Install Study OS</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Add it to your home screen for one-tap access, like a native app.
-        </p>
+        {iosMode ? (
+          <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+            Tap <Share className="size-3.5 inline" /> Share, then &quot;Add to Home Screen&quot;.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Add it to your home screen for one-tap access, like a native app.
+          </p>
+        )}
         <div className="flex gap-2 mt-3">
-          <Button size="sm" onClick={install}>
-            Install
-          </Button>
+          {!iosMode && (
+            <Button size="sm" onClick={install} disabled={!deferredPrompt}>
+              {preparing && !deferredPrompt ? "Preparing…" : "Install"}
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={dismiss}>
-            Not now
+            {iosMode ? "Got it" : "Not now"}
           </Button>
         </div>
       </div>
