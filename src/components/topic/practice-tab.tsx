@@ -65,11 +65,12 @@ function QuestionCard({
                 <button
                   key={i}
                   onClick={() => !revealed && setSelected(opt)}
-                  className={`text-left text-sm rounded-md border px-3 py-2 transition-colors ${
+                  className={`flex items-center gap-1 text-left text-sm rounded-md border px-3 py-2.5 transition-colors overflow-x-auto ${
                     selected === opt ? "border-primary" : "border-muted"
-                  } ${isCorrect ? "bg-green-50 border-green-400" : ""} ${isWrongPick ? "bg-red-50 border-red-400" : ""}`}
+                  } ${isCorrect ? "bg-green-50 border-green-400 dark:bg-green-500/15" : ""} ${isWrongPick ? "bg-red-50 border-red-400 dark:bg-red-500/15" : ""}`}
                 >
-                  {opt}
+                  <span className="font-semibold mr-1.5">{String.fromCharCode(65 + i)}.</span>
+                  <AIContent text={opt} inline />
                 </button>
               );
             })}
@@ -103,7 +104,9 @@ function QuestionCard({
               ) : (
                 <XCircle className="size-4 text-red-500" />
               )}
-              Answer: {correctAnswer}
+              <span>
+                Answer: <AIContent text={correctAnswer ?? ""} inline />
+              </span>
             </p>
             {explanation && <AIContent text={explanation} className="text-muted-foreground" />}
           </div>

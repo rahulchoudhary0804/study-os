@@ -84,7 +84,7 @@ they came from an actual exam paper.
 Rules:
 - For "MCQ": give exactly 4 "options", and "correctAnswer" must be copied EXACTLY from one of the options.
 - For "NUMERICAL" / "SUBJECTIVE": omit the "options" key entirely.
-- Math/chemistry notation: use LaTeX inside $...$ and escape every backslash for JSON (write \\\\frac, \\\\sqrt).
+- Math/chemistry notation (in the question, EVERY option, correctAnswer and explanation): use LaTeX inside $...$ and escape every backslash for JSON (write \\\\frac, \\\\sqrt).
 
 Return ONLY JSON of this shape:
 {
