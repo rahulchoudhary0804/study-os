@@ -7,7 +7,7 @@
  * relevant — it still helps Bing/Yandex and gives AI crawlers context.
  */
 export const SITE_NAME = "Smart Padhai";
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://study-os-indol.vercel.app").replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://smartpadhai.vercel.app").replace(/\/$/, "");
 export const SITE_TAGLINE = "AI Study Planner for JEE Main 2027 & RBSE Class 12 Board";
 export const SITE_DESCRIPTION =
   "Smart Padhai is a free AI study planner for JEE Main 2027 and RBSE Class 12 (Rajasthan Board) students — priority-wise chapters with marks and question weightage, NCERT PDFs, AI practice questions, notes, spaced revision, daily study plans, streaks and progress analytics for Physics, Chemistry and Maths.";

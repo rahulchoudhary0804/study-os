@@ -22,10 +22,10 @@ const root = path.resolve(__dirname, "..");
 const bwDir = process.env.BUBBLEWRAP_DIR || path.join(root, "node_modules");
 const bw = require(path.join(bwDir, "@bubblewrap", "core"));
 
-const HOST = process.env.TWA_HOST || "study-os-indol.vercel.app";
+const HOST = process.env.TWA_HOST || "smartpadhai.vercel.app";
 const PACKAGE_ID = "app.vercel.studyos.twa";
-const APP_VERSION_CODE = Number(process.env.TWA_VERSION_CODE || 1);
-const APP_VERSION_NAME = process.env.TWA_VERSION_NAME || "1.0.0";
+const APP_VERSION_CODE = Number(process.env.TWA_VERSION_CODE || 3);
+const APP_VERSION_NAME = process.env.TWA_VERSION_NAME || "1.2.0";
 
 function findJdk() {
   if (process.env.JAVA_HOME) return process.env.JAVA_HOME;

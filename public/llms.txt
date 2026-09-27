@@ -3,10 +3,10 @@
 > Smart Padhai is a free AI study planner for Indian Class 11–12 science students preparing for JEE Main 2027 and the RBSE (Rajasthan Board, BSER Ajmer) Class 12 board exam 2027. It ranks every Physics, Chemistry and Maths chapter by priority using official RBSE 2026–27 chapter marks and JEE Main question weightage, and gives daily study plans, AI practice questions, AI notes, an AI doubt-solving assistant, NCERT chapter PDFs, spaced revision, streaks and analytics.
 
 ## Public pages
-- [Syllabus hub](https://study-os-indol.vercel.app/syllabus): priority-wise syllabus for JEE Main and RBSE Class 12
-- [RBSE Class 12 syllabus 2026-27 with chapter-wise marks](https://study-os-indol.vercel.app/syllabus/rbse-class-12)
-- [JEE Main 2027 syllabus with chapter-wise weightage](https://study-os-indol.vercel.app/syllabus/jee-main)
-- [Android app (APK)](https://study-os-indol.vercel.app/downloads/smart-padhai.apk)
+- [Syllabus hub](https://smartpadhai.vercel.app/syllabus): priority-wise syllabus for JEE Main and RBSE Class 12
+- [RBSE Class 12 syllabus 2026-27 with chapter-wise marks](https://smartpadhai.vercel.app/syllabus/rbse-class-12)
+- [JEE Main 2027 syllabus with chapter-wise weightage](https://smartpadhai.vercel.app/syllabus/jee-main)
+- [Android app (APK)](https://smartpadhai.vercel.app/downloads/smart-padhai.apk)
 
 ## Key facts
 - RBSE Class 12 theory papers: Physics 56, Chemistry 56 (+14 sessional, +30 practical), Mathematics 80 (+20 sessional).
