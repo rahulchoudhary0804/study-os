@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Moon, Palette, Search, Sun, X } from "lucide-react";
+import { LogOut, Moon, Palette, Search, Sun, X } from "lucide-react";
+import { signOutAction } from "@/server/actions/auth";
+import { setRobotState } from "@/components/study-robot/robot-store";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { SearchBox } from "@/components/search/search-box";
@@ -46,5 +48,25 @@ export function MobileThemeMenuItems() {
         </Link>
       </DropdownMenuItem>
     </>
+  );
+}
+
+/** Log out with a goodbye wave from the robot before the redirect. */
+export function LogoutMenuItem() {
+  const [leaving, startTransition] = useTransition();
+  return (
+    <DropdownMenuItem
+      disabled={leaving}
+      onSelect={(e) => {
+        e.preventDefault();
+        setRobotState("waving", { message: "Bye! See you soon 👋", duration: 0 });
+        startTransition(async () => {
+          await new Promise((r) => setTimeout(r, 900));
+          await signOutAction();
+        });
+      }}
+    >
+      <LogOut className="size-4" /> {leaving ? "Logging out…" : "Log out"}
+    </DropdownMenuItem>
   );
 }

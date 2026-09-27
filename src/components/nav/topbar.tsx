@@ -8,14 +8,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { signOutAction } from "@/server/actions/auth";
 import { SearchBox } from "@/components/search/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StylePicker } from "@/components/theme-style";
 import type { RankResult } from "@/lib/domain/rank";
 import { RankBadgeIcon } from "@/components/rank/rank-badge-icon";
 import { RankBadgeButton } from "@/components/rank/rank-list-dialog";
-import { MobileSearch, MobileThemeMenuItems } from "@/components/nav/mobile-topbar-parts";
+import { LogoutMenuItem, MobileSearch, MobileThemeMenuItems } from "@/components/nav/mobile-topbar-parts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -94,13 +93,7 @@ export function Topbar({
             <Link href="/settings">Settings</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <form action={signOutAction}>
-            <button type="submit" className="w-full">
-              <DropdownMenuItem asChild>
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </button>
-          </form>
+          <LogoutMenuItem />
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

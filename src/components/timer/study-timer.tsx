@@ -7,6 +7,7 @@ import { Play, Pause, RotateCcw, Timer as TimerIcon } from "lucide-react";
 import { saveStudySessionAction } from "@/server/actions/sessions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { setRobotBase, setRobotState } from "@/components/study-robot/robot-store";
 
 type Mode = "FOCUS" | "SHORT_BREAK" | "LONG_BREAK";
 
@@ -28,6 +29,13 @@ export function StudyTimer({
   const [secondsLeft, setSecondsLeft] = useState(DURATIONS.FOCUS);
   const [running, setRunning] = useState(false);
   const startedAtRef = useRef<Date | null>(null);
+
+  // Robot looks at its book while a focus session runs.
+  useEffect(() => {
+    if (!running || mode !== "FOCUS") return;
+    setRobotBase("studying");
+    return () => setRobotBase("idle");
+  }, [running, mode]);
 
   useEffect(() => {
     if (!running) return;
@@ -55,6 +63,8 @@ export function StudyTimer({
   function start() {
     startedAtRef.current = new Date();
     setRunning(true);
+    if (mode === "FOCUS") setRobotState("focused", { message: "Focus mode on 🎯", duration: 2500 });
+    else setRobotState("happy", { message: "Break time — stretch! ☕", duration: 2500 });
   }
 
   async function finishSession(completed: boolean) {
@@ -70,6 +80,9 @@ export function StudyTimer({
     try {
       await saveStudySessionAction({ subjectId, chapterId, topicId, sessionType: mode, startedAt, endedAt });
       if (mode === "FOCUS") {
+        setRobotState(completed ? "celebrating" : "happy", {
+          message: completed ? "Focus session complete! 🎉" : `${Math.round(elapsed / 60)} min logged 👍`,
+        });
         toast.success(completed ? "Focus session logged" : "Session saved", {
           description: `${Math.round(elapsed / 60)} min logged${contextLabel ? ` on ${contextLabel}` : ""}.`,
         });

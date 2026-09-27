@@ -19,6 +19,7 @@ import {
 import { Pin, PinOff, Trash2, Plus, Sparkles } from "lucide-react";
 import { upsertNoteAction, deleteNoteAction, togglePinNoteAction } from "@/server/actions/notes";
 import { toast } from "sonner";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 export interface NoteDTO {
   id: string;
@@ -38,7 +39,13 @@ function NoteEditorDialog({ note, trigger }: { note?: NoteDTO; trigger: React.Re
   const router = useRouter();
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setRobotState("writing", { message: note ? "Let's polish this ✍️" : "New note! ✍️", duration: 2500 });
+      }}
+    >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -63,6 +70,7 @@ function NoteEditorDialog({ note, trigger }: { note?: NoteDTO; trigger: React.Re
                 setOpen(false);
                 router.refresh();
                 toast.success(note ? "Note updated" : "Note created");
+                setRobotState("happy", { message: "Saved! 📝" });
               })
             }
           >

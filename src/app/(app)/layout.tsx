@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/nav/sidebar";
 import { Topbar } from "@/components/nav/topbar";
 import { BottomNav } from "@/components/nav/bottom-nav";
-import { AIPencilFab } from "@/components/nav/ai-pencil-fab";
+import { RobotFab } from "@/components/study-robot/robot-fab";
 import { PageTransition } from "@/components/nav/page-transition";
 import { getUserRank } from "@/server/queries/rank";
 
@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <BottomNav />
-      <AIPencilFab />
+      <RobotFab />
     </div>
   );
 }

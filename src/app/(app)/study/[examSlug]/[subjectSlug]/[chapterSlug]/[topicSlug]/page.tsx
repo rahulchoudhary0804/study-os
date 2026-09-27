@@ -13,6 +13,7 @@ import { AIChatTab } from "@/components/topic/ai-chat-tab";
 import { TopicInsight } from "@/components/topic/topic-insight";
 import { StudyTimer } from "@/components/timer/study-timer";
 import { format } from "date-fns";
+import { RobotCue } from "@/components/study-robot/robot-cue";
 
 function JsonList({ value, empty = "None listed" }: { value: unknown; empty?: string }) {
   const arr = Array.isArray(value) ? (value as string[]) : [];
@@ -66,6 +67,7 @@ export default async function TopicPage({
 
   return (
     <div className="space-y-5">
+      <RobotCue state="studying" message={`Let's study ${topic.name} 📖`} duration={3000} />
       <div>
         <p className="text-sm text-muted-foreground">
           <Link href="/study" className="hover:underline">

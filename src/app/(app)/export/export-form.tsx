@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 interface Option {
   id: string;
@@ -125,6 +126,7 @@ export function ExportForm({ exams }: { exams: Option[] }) {
           return;
         }
         printHtml(await htmlRes.text());
+        setRobotState("document", { message: "Save it as PDF 📄", duration: 4000 });
         toast.success('Print dialog opened — choose "Save as PDF" to download.');
         return;
       }
@@ -140,6 +142,7 @@ export function ExportForm({ exams }: { exams: Option[] }) {
       // Revoking synchronously can cancel the download in some mobile browsers.
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
       toast.success("PDF downloaded");
+      setRobotState("document", { message: "Your PDF is ready 📄", duration: 4000 });
     });
   }
 

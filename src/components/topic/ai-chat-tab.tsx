@@ -10,6 +10,7 @@ import { explainAction } from "@/server/actions/ai";
 import { Bot, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIContent } from "@/components/ai/ai-content";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 type Mode = "default" | "simple" | "hinglish" | "hint";
 interface Msg {
@@ -41,14 +42,17 @@ export function AIChatTab({ topicId }: { topicId?: string }) {
     if (!message.trim() || isPending) return;
     setMessages((m) => [...m, { role: "USER", content: message }]);
     setInput("");
+    setRobotState("thinking", { duration: 0 });
     startTransition(async () => {
       try {
         const result = await explainAction({ topicId, message, mode, conversationId });
         if (!result) return;
         setConversationId(result.conversationId);
+        setRobotState("happy", { message: null, duration: 1800 });
         setMessages((m) => [...m, { role: "ASSISTANT", content: result.answer, followUps: result.followUpSuggestions }]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
+        setRobotState("confused", { message: null, duration: 2000 });
         toast.error(
           msg.includes("AI_NOT_CONFIGURED")
             ? "AI isn't configured — add GEMINI_API_KEY."

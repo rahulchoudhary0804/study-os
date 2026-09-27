@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Save, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { generateNotesAction, saveAINotesAsNoteAction } from "@/server/actions/ai";
+import { setRobotState } from "@/components/study-robot/robot-store";
 import type { AINotes } from "@/lib/ai/schemas";
 import { AIContent } from "@/components/ai/ai-content";
 
@@ -68,13 +69,16 @@ export function LearnTab({ topicId, topicName }: { topicId: string; topicName: s
   const [saved, setSaved] = useState(false);
 
   function generate(force = false) {
+    setRobotState("thinking", { message: "Writing your notes…", duration: 0 });
     startTransition(async () => {
       try {
         const result = (await generateNotesAction({ topicId, force })) as AINotes;
         setNotes(result);
         setSaved(false);
+        setRobotState("excited", { message: "Notes ready! 📚" });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
+        setRobotState("concerned", { message: "Couldn't write notes — try again?" });
         if (msg.includes("AI_NOT_CONFIGURED")) {
           toast.error("AI isn't configured yet — add GEMINI_API_KEY to .env.local");
         } else if (msg.includes("RATE_LIMITED")) {
@@ -90,6 +94,7 @@ export function LearnTab({ topicId, topicName }: { topicId: string; topicName: s
     if (!notes) return;
     await saveAINotesAsNoteAction(topicId, notesToMarkdown(notes, topicName), `${topicName} — AI Notes`);
     setSaved(true);
+    setRobotState("writing", { message: "Saved to your notes ✍️" });
     toast.success("Saved to My Notes");
   }
 

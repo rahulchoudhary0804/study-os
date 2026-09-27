@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TargetItemRow } from "@/components/dashboard/target-item-row";
+import { DashboardRobotCue } from "@/components/study-robot/robot-cue";
 import {
   Flame,
   Target,
@@ -40,6 +41,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <DashboardRobotCue
+        streak={data.streak.current}
+        revisionDue={data.revisionDueTotal}
+        weakTopic={data.weakTopics[0]?.name ?? null}
+        missedYesterday={data.missedYesterday}
+        todayDone={data.todayTarget?.items.filter((i) => i.isDone).length ?? 0}
+        todayTotal={data.todayTarget?.items.length ?? 0}
+      />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           {greeting()}, {name} 👋

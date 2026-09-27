@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { addTopicsToTodayAction } from "@/server/actions/targets";
 import type { SyllabusExam } from "@/server/queries/syllabus";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 /**
  * Exam → Subject → Chapter → Topic checkbox picker for Today's Plan. Ticking
@@ -86,6 +87,7 @@ export function PlanTopicPicker({
           `${added} topic${added === 1 ? "" : "s"} added to today's plan${skipped ? ` (${skipped} already there)` : ""}`
         );
         setSelected(new Set());
+        if (added > 0) setRobotState("encouraging", { message: `${added} topic${added === 1 ? "" : "s"} planned — let's go! 💪` });
         router.refresh();
       } catch {
         toast.error("Couldn't add those topics — try again.");

@@ -3,13 +3,13 @@ import { startOfDay, differenceInCalendarDays } from "date-fns";
 import { getOverallProgress } from "./progress";
 import { getWeakTopics } from "./weakness";
 import { getDueRevisions } from "./revision";
-import { appToday } from "@/lib/dates";
+import { addAppDays, appToday } from "@/lib/dates";
 import type { Profile } from "@prisma/client";
 
 export async function getDashboardData(profile: Profile) {
   const today = startOfDay(new Date());
 
-  const [streak, todayLog, todayTarget, overallProgress, weakTopics, revisions] = await Promise.all([
+  const [streak, todayLog, todayTarget, overallProgress, weakTopics, revisions, missedYesterday] = await Promise.all([
     prisma.streak.findUnique({ where: { userId: profile.id } }),
     prisma.studyDayLog.findUnique({ where: { userId_date: { userId: profile.id, date: today } } }),
     prisma.dailyTarget.findUnique({
@@ -24,6 +24,9 @@ export async function getDashboardData(profile: Profile) {
     getOverallProgress(profile.id, profile.targetExamId ?? undefined),
     getWeakTopics(profile.id, 3),
     getDueRevisions(profile.id),
+    prisma.dailyTargetItem.count({
+      where: { isDone: false, dailyTarget: { userId: profile.id, date: addAppDays(appToday(), -1) } },
+    }),
   ]);
 
   const examCountdown = profile.examDate
@@ -40,6 +43,7 @@ export async function getDashboardData(profile: Profile) {
     todayMinutes,
     goalMinutes,
     todayTarget,
+    missedYesterday,
     overallProgress,
     weakTopics,
     revisionDueTotal: revisions.total,

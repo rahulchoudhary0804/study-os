@@ -21,6 +21,7 @@ import {
 import type { AIPlan } from "@/lib/ai/schemas";
 import { AIContent } from "@/components/ai/ai-content";
 import { cn } from "@/lib/utils";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 type Mode = "today" | "full";
 
@@ -56,6 +57,7 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
 
   function generate() {
     if (!examId) return;
+    setRobotState("thinking", { message: "Planning your day… 🧠", duration: 0 });
     startTransition(async () => {
       try {
         if (mode === "today") {
@@ -74,7 +76,9 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
           setPlan(null);
         }
         setApplied(false);
+        setRobotState("excited", { message: "Your plan is ready! ✨" });
       } catch (err) {
+        setRobotState("concerned", { message: "Couldn't make a plan — try again?" });
         const msg = err instanceof Error ? err.message : "AI_FAILED";
         toast.error(
           msg.includes("AI_NOT_CONFIGURED")
@@ -101,6 +105,7 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
           })),
         });
         setApplied(true);
+        setRobotState("encouraging", { message: "Plan set — let's go! 💪" });
         toast.success("Applied to today's plan", { action: { label: "Open", onClick: () => router.push("/plan") } });
         router.refresh();
       } else if (mode === "full" && fullPlan) {

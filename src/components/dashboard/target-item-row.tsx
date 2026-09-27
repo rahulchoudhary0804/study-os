@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { SwapTopicButton, type SwapOption } from "@/components/plan/swap-topic-button";
 import { BookOpen, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 export interface NcertLink {
   title: string;
@@ -46,7 +47,10 @@ export function TargetItemRow({
   function toggle(checked: boolean) {
     startTransition(async () => {
       setDone(checked);
-      await toggleTargetItemAction(id, checked);
+      const { remaining, total } = await toggleTargetItemAction(id, checked);
+      if (!checked) return;
+      if (remaining === 0 && total > 0) setRobotState("celebrating", { message: "Daily target complete! 🥳", duration: 5000 });
+      else setRobotState("excited", { message: `Task done! ${remaining} to go ✨` });
     });
   }
 

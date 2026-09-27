@@ -10,38 +10,75 @@ html:not([data-style="glass"]) [class*="backdrop-blur"] {
 }
 
 /* ==========================================================================
-   AI PENCIL (floating assistant button) — levitates, tilts and sparkles.
+   STUDY ROBOT (src/components/study-robot) — one character, CSS-only motion.
+   The robot's colours are fixed on purpose: its identity never changes with
+   the app theme. Transforms on SVG parts use view-box coordinates.
    ========================================================================== */
-@keyframes pencil-levitate {
-  0%, 100% { transform: translateY(0) rotate(-6deg); }
-  50% { transform: translateY(-8px) rotate(6deg); }
+.robot g,
+.robot rect,
+.robot circle,
+.robot path,
+.robot text {
+  transform-box: view-box;
 }
-@keyframes pencil-shadow {
-  0%, 100% { transform: scaleX(1); opacity: 0.55; }
-  50% { transform: scaleX(0.65); opacity: 0.25; }
+.robot-all { transform-origin: 60px 126px; }
+.robot-head { transform-origin: 60px 84px; transition: transform 0.4s ease; }
+.robot-arm { transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.robot-antenna, .robot-chest, .robot-ear { animation: robot-pulse 2.4s ease-in-out infinite; }
+.robot--glow .robot-antenna, .robot--glow .robot-chest { animation-duration: 0.7s; }
+.robot--glow .robot-antenna { r: 5.5; }
+
+/* body motions */
+.robot--breathe .robot-all { animation: robot-breathe 3.2s ease-in-out infinite; }
+.robot--bounce .robot-all { animation: robot-bounce 0.9s ease-in-out infinite; }
+.robot--hop .robot-all { animation: robot-hop 0.7s cubic-bezier(0.3, 0, 0.4, 1) infinite; }
+.robot--droop .robot-head { transform: rotate(-9deg) translateY(3px); }
+.robot--droop .robot-all { animation: robot-breathe 5s ease-in-out infinite; }
+.robot--tilt .robot-head { transform: rotate(-8deg); }
+.robot--tilt .robot-all { animation: robot-breathe 3.2s ease-in-out infinite; }
+.robot--shake .robot-all { animation: robot-shake 0.5s ease-in-out 3; }
+.robot--nod .robot-head { animation: robot-nod 2.4s ease-in-out infinite; }
+
+/* face details */
+.robot-eyes--blink { transform-origin: 60px 52px; animation: robot-blink 4.5s infinite; }
+.robot-eyes--read { animation: robot-read 3s ease-in-out infinite; }
+.robot-arm--wave { animation: robot-wave 0.6s ease-in-out infinite alternate; }
+.robot-page { transform-origin: 60px 108px; animation: robot-page 3s ease-in-out infinite; }
+.robot-scribble { stroke-dasharray: 30; animation: robot-scribble 1.4s linear infinite; }
+.robot-pencil-tool { animation: robot-write 0.5s ease-in-out infinite alternate; }
+.robot-zzz text { animation: robot-float 2.4s ease-in-out infinite; }
+.robot-dots circle { animation: robot-dot 1.2s ease-in-out infinite; }
+.robot-pop { transform-origin: 100px 18px; animation: robot-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.robot-confetti rect { animation: robot-confetti 1.3s ease-in infinite; }
+.robot-prop { animation: robot-pop-in 0.35s ease-out both; }
+
+@keyframes robot-pulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+@keyframes robot-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 0.985) translateY(1px); } }
+@keyframes robot-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes robot-hop {
+  0%, 100% { transform: translateY(0) scale(1.03, 0.97); }
+  40% { transform: translateY(-9px) scale(0.98, 1.03); }
 }
-@keyframes pencil-wiggle {
-  0%, 80%, 100% { transform: rotate(0); }
-  85% { transform: rotate(-14deg); }
-  90% { transform: rotate(10deg); }
-  95% { transform: rotate(-6deg); }
-}
-@keyframes pencil-sparkle {
-  0%, 100% { transform: scale(0.6) rotate(0); opacity: 0.4; }
-  50% { transform: scale(1.1) rotate(25deg); opacity: 1; }
-}
-@keyframes pencil-glow {
-  0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 55%, transparent); }
-  100% { box-shadow: 0 0 0 14px transparent; }
-}
-.pencil-levitate { animation: pencil-levitate 3s ease-in-out infinite; }
-.pencil-shadow { animation: pencil-shadow 3s ease-in-out infinite; }
-.pencil-wiggle { animation: pencil-wiggle 4s ease-in-out infinite; }
-.pencil-sparkle { animation: pencil-sparkle 2s ease-in-out infinite; }
-.pencil-glow { animation: pencil-glow 2.2s ease-out infinite; }
-a:active .pencil-levitate { transform: scale(0.92); }
+@keyframes robot-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@keyframes robot-nod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg) translateY(1px); } }
+@keyframes robot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes robot-read { 0%, 100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
+@keyframes robot-wave { from { transform: rotate(-140deg); } to { transform: rotate(-100deg); } }
+@keyframes robot-page { 0%, 70%, 100% { transform: scaleX(1); } 85% { transform: scaleX(-0.2); } }
+@keyframes robot-scribble { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+@keyframes robot-write { from { transform: translate(0, 0); } to { transform: translate(-4px, 2px); } }
+@keyframes robot-float { 0% { transform: translate(0, 4px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate(4px, -6px); opacity: 0; } }
+@keyframes robot-dot { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+@keyframes robot-pop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes robot-pop-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes robot-confetti { 0% { transform: translateY(-6px) rotate(0); opacity: 1; } 100% { transform: translateY(26px) rotate(200deg); opacity: 0; } }
+
+/* speech bubble next to the floating robot */
+.robot-bubble { animation: robot-bubble 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes robot-bubble { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }
+
 @media (prefers-reduced-motion: reduce) {
-  .pencil-levitate, .pencil-shadow, .pencil-wiggle, .pencil-sparkle, .pencil-glow { animation: none; }
+  .robot *, .robot-bubble { animation: none !important; }
 }
 
 /* ==========================================================================

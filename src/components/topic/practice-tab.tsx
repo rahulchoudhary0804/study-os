@@ -13,6 +13,7 @@ import { Sparkles, CheckCircle2, XCircle, Gauge } from "lucide-react";
 import { AIContent } from "@/components/ai/ai-content";
 import { computeEffortNeeded, type EffortAttempt } from "@/lib/domain/effort";
 import { Progress } from "@/components/ui/progress";
+import { setRobotState } from "@/components/study-robot/robot-store";
 
 export interface SavedQuestion {
   id: string;
@@ -80,6 +81,15 @@ function QuestionCard({
             variant="secondary"
             onClick={() => {
               setRevealed(true);
+              if (options && options.length > 0) {
+                if (selected === correctAnswer) setRobotState("happy");
+                else
+                  setRobotState("confused", {
+                    message: selected ? "Hmm, not quite…" : "Peeked at the answer? 👀",
+                    duration: 1600,
+                    then: "encouraging",
+                  });
+              }
               if (onAttempt) onAttempt(selected === correctAnswer);
             }}
           >
@@ -115,14 +125,17 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
   const effort = useMemo(() => computeEffortNeeded(batchAttempts), [batchAttempts]);
 
   function generate() {
+    setRobotState("thinking", { message: "Cooking up questions…", duration: 0 });
     startTransition(async () => {
       try {
         const result = (await generateQuestionsAction({ topicId, examTarget, difficulty, count })) as AIQuestion[];
         setGenerated(result);
+        setRobotState("excited", { message: `${result.length} questions ready! ✨` });
         setSaved(false);
         setBatchAttempts([]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
+        setRobotState("concerned", { message: "That didn't work — try again?" });
         toast.error(
           msg.includes("AI_NOT_CONFIGURED")
             ? "AI isn't configured — add GEMINI_API_KEY."

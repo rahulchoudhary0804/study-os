@@ -9,6 +9,8 @@ import { AIChatTab } from "@/components/topic/ai-chat-tab";
 import { searchAction } from "@/server/actions/search";
 import { CalendarCheck, CheckCircle2, MessageCircle, Search, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StudyRobot } from "@/components/study-robot/study-robot";
+import { useRobot } from "@/components/study-robot/robot-store";
 
 export interface AssistantTopic {
   id: string;
@@ -104,11 +106,14 @@ export function AssistantClient({
       <div className="min-w-0">
         {selected ? (
           <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold flex items-center gap-1.5">
-                <Sparkles className="size-4 text-primary" /> {selected.title}
-              </p>
-              <p className="text-xs text-muted-foreground">{selected.breadcrumb}</p>
+            <div className="flex items-center gap-3">
+              <AssistantRobot />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  <Sparkles className="size-4 text-primary shrink-0" /> {selected.title}
+                </p>
+                <p className="text-xs text-muted-foreground">{selected.breadcrumb}</p>
+              </div>
             </div>
             {/* Keyed by topic so switching topics starts a fresh conversation. */}
             <AIChatTab key={selected.id} topicId={selected.id === GENERAL.id ? undefined : selected.id} />
@@ -145,4 +150,10 @@ function TopicButton({ topic, active, onClick }: { topic: AssistantTopic; active
       <p className="text-xs text-muted-foreground truncate">{topic.breadcrumb}</p>
     </button>
   );
+}
+
+/** The same study robot, shown next to the chat — it thinks while the AI answers. */
+function AssistantRobot() {
+  const { state, tick } = useRobot();
+  return <StudyRobot state={state} size={52} animationKey={tick} className="shrink-0" />;
 }

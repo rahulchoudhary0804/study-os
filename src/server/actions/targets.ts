@@ -29,9 +29,14 @@ async function assertOwnItem(itemId: string, userId: string) {
 
 export async function toggleTargetItemAction(itemId: string, isDone: boolean) {
   const { profile } = await requireUserAction();
-  await assertOwnItem(itemId, profile.id);
+  const item = await assertOwnItem(itemId, profile.id);
   await prisma.dailyTargetItem.update({ where: { id: itemId }, data: { isDone } });
+  const [total, remaining] = await Promise.all([
+    prisma.dailyTargetItem.count({ where: { dailyTargetId: item.dailyTargetId } }),
+    prisma.dailyTargetItem.count({ where: { dailyTargetId: item.dailyTargetId, isDone: false } }),
+  ]);
   revalidatePlan();
+  return { total, remaining };
 }
 
 const addItemSchema = z.object({
