@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { searchAction, type SearchResult } from "@/server/actions/search";
 
-export function SearchBox() {
+export function SearchBox({ autoFocus, onNavigate }: { autoFocus?: boolean; onNavigate?: () => void } = {}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -44,6 +44,7 @@ export function SearchBox() {
           aria-label="Search chapters, topics and notes"
           placeholder="Search chapters, topics, notes…"
           className="pl-8 h-9"
+          autoFocus={autoFocus}
           value={query}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
@@ -65,6 +66,7 @@ export function SearchBox() {
               onClick={() => {
                 setOpen(false);
                 setQuery("");
+                onNavigate?.();
                 router.push(r.href);
               }}
             >

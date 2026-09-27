@@ -10,6 +10,41 @@ html:not([data-style="glass"]) [class*="backdrop-blur"] {
 }
 
 /* ==========================================================================
+   AI PENCIL (floating assistant button) — levitates, tilts and sparkles.
+   ========================================================================== */
+@keyframes pencil-levitate {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-8px) rotate(6deg); }
+}
+@keyframes pencil-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.55; }
+  50% { transform: scaleX(0.65); opacity: 0.25; }
+}
+@keyframes pencil-wiggle {
+  0%, 80%, 100% { transform: rotate(0); }
+  85% { transform: rotate(-14deg); }
+  90% { transform: rotate(10deg); }
+  95% { transform: rotate(-6deg); }
+}
+@keyframes pencil-sparkle {
+  0%, 100% { transform: scale(0.6) rotate(0); opacity: 0.4; }
+  50% { transform: scale(1.1) rotate(25deg); opacity: 1; }
+}
+@keyframes pencil-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+.pencil-levitate { animation: pencil-levitate 3s ease-in-out infinite; }
+.pencil-shadow { animation: pencil-shadow 3s ease-in-out infinite; }
+.pencil-wiggle { animation: pencil-wiggle 4s ease-in-out infinite; }
+.pencil-sparkle { animation: pencil-sparkle 2s ease-in-out infinite; }
+.pencil-glow { animation: pencil-glow 2.2s ease-out infinite; }
+a:active .pencil-levitate { transform: scale(0.92); }
+@media (prefers-reduced-motion: reduce) {
+  .pencil-levitate, .pencil-shadow, .pencil-wiggle, .pencil-sparkle, .pencil-glow { animation: none; }
+}
+
+/* ==========================================================================
    VISUAL STYLES — selected via <html data-style="…"> (see theme-style.tsx).
    "neo" (Neo-Brutalism) is the default defined in globals.css :root / .dark.
    Each style only swaps design tokens (colours, radius, elevation, fonts),

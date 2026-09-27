@@ -10,14 +10,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 
 export function BottomNav() {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter((i) => i.mobile);
-  const moreItems = NAV_ITEMS.filter((i) => !i.mobile);
+  const items = NAV_ITEMS.filter((i) => i.mobileOrder).sort((a, b) => a.mobileOrder! - b.mobileOrder!);
+  const moreItems = NAV_ITEMS.filter((i) => !i.mobileOrder && !i.fab);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreActive = moreItems.some((i) => pathname === i.href || pathname.startsWith(i.href + "/"));
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-border bg-background/80 backdrop-blur-lg">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-border bg-background/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5">
           {items.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -26,7 +26,7 @@ export function BottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 text-[10px] transition-colors",
+                  "flex flex-col items-center gap-1 py-2 px-0.5 text-[10px] leading-tight text-center transition-colors",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -38,7 +38,7 @@ export function BottomNav() {
           <button
             onClick={() => setMoreOpen(true)}
             className={cn(
-              "flex flex-col items-center gap-1 py-2 text-[10px] transition-colors",
+              "flex flex-col items-center gap-1 py-2 px-0.5 text-[10px] leading-tight text-center transition-colors",
               moreActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >

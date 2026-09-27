@@ -103,7 +103,7 @@ export function PwaInstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 inset-x-4 sm:left-auto sm:right-4 sm:w-80 z-50 flex items-start gap-3 rounded-xl border-2 border-border bg-popover shadow-nb p-4">
+    <div className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] md:bottom-24 inset-x-4 sm:left-auto sm:right-4 sm:w-80 z-50 flex items-start gap-3 rounded-xl border-2 border-border bg-popover shadow-nb p-4">
       <div className="flex items-center justify-center size-9 rounded-lg bg-primary/10 text-primary shrink-0 border-2 border-border">
         {platform === "android" ? <Smartphone className="size-4.5" /> : <Download className="size-4.5" />}
       </div>

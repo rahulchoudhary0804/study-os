@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flame } from "lucide-react";
+import { Flame, GraduationCap } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +15,14 @@ import { StylePicker } from "@/components/theme-style";
 import type { RankResult } from "@/lib/domain/rank";
 import { RankBadgeIcon } from "@/components/rank/rank-badge-icon";
 import { RankBadgeButton } from "@/components/rank/rank-list-dialog";
+import { MobileSearch, MobileThemeMenuItems } from "@/components/nav/mobile-topbar-parts";
 import { cn } from "@/lib/utils";
 
+/**
+ * Mobile:  [logo · Study OS] ………… [search] [streak] [avatar ▾ (theme, settings)]
+ * Desktop: [search ……………]  ………… [rank] [streak] [style] [light/dark] [avatar ▾]
+ * (On desktop the app name lives in the sidebar.)
+ */
 export function Topbar({
   email,
   currentStreak,
@@ -29,23 +35,40 @@ export function Topbar({
   const initial = email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <header className="h-14 border-b-2 border-border flex items-center gap-3 px-4 md:px-6 shrink-0 sticky top-0 z-30 bg-background/90 backdrop-blur-lg">
-      <div className="flex-1 max-w-md">
+    <header className="h-14 border-b-2 border-border flex items-center gap-2 md:gap-3 px-3 md:px-6 shrink-0 sticky top-0 z-30 bg-background/95 backdrop-blur-lg">
+      <Link href="/dashboard" className="md:hidden flex items-center gap-2 min-w-0 mr-auto">
+        <span className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shrink-0 border-2 border-border shadow-nb-sm">
+          <GraduationCap className="size-4.5" />
+        </span>
+        <span className="font-semibold tracking-tight truncate">Study OS</span>
+      </Link>
+
+      <div className="hidden md:block flex-1 max-w-md">
         <SearchBox />
       </div>
-      <RankBadgeButton rank={rank} />
+      <div className="hidden md:block flex-1" />
+
+      <div className="md:hidden">
+        <MobileSearch />
+      </div>
+      <div className="hidden md:block">
+        <RankBadgeButton rank={rank} />
+      </div>
       <Link
         href="/streak"
-        className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-500/10 hover:bg-orange-500/15 transition-colors rounded-full px-2.5 py-1"
+        aria-label={`${currentStreak} day streak`}
+        className="flex items-center gap-1 text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-500/10 hover:bg-orange-500/15 transition-colors rounded-full px-2.5 py-1 shrink-0"
       >
         <Flame className="size-4" />
         {currentStreak}
       </Link>
-      <StylePicker />
-      <ThemeToggle />
+      <div className="hidden md:flex items-center gap-1">
+        <StylePicker />
+        <ThemeToggle />
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded-full" aria-label="Account menu">
+          <button className="rounded-full shrink-0" aria-label="Account menu">
             <Avatar className="size-8">
               <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
@@ -63,6 +86,10 @@ export function Topbar({
             )}
           </div>
           <DropdownMenuSeparator />
+          <div className="md:hidden">
+            <MobileThemeMenuItems />
+            <DropdownMenuSeparator />
+          </div>
           <DropdownMenuItem asChild>
             <Link href="/settings">Settings</Link>
           </DropdownMenuItem>
