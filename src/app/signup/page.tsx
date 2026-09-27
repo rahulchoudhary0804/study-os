@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { signupSchema, type SignupInput } from "@/lib/validations/auth";
+import { signUpAction } from "@/server/actions/auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -25,28 +26,26 @@ export default function SignupPage() {
 
   const onSubmit = async (values: SignupInput) => {
     setLoading(true);
+    // Account is created (pre-confirmed) on the server — no confirmation email,
+    // so no Supabase email rate limit — then we sign straight in.
+    const created = await signUpAction(values).catch(() => ({ ok: false as const, error: "Network error — please try again." }));
+    if (!created.ok) {
+      setLoading(false);
+      toast.error(created.error);
+      return;
+    }
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: { data: { full_name: values.fullName } },
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email: values.email.trim().toLowerCase(), password: values.password });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      // Account exists; let them log in manually rather than leaving them stuck.
+      toast.success("Account created — please log in.");
+      setSent(true);
       return;
     }
-    // With email confirmation disabled in Supabase, signUp returns a live
-    // session immediately — no email round-trip, no rate limit. If a project
-    // still has confirmation required, session is null and we fall back to
-    // the "check your email" state below.
-    if (data.session) {
-      toast.success("Account created");
-      router.push("/dashboard");
-      router.refresh();
-      return;
-    }
-    setSent(true);
+    toast.success("Account created");
+    router.push("/dashboard");
+    router.refresh();
   };
 
   if (sent) {
@@ -54,10 +53,8 @@ export default function SignupPage() {
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Check your email</CardTitle>
-            <CardDescription>
-              We sent a confirmation link. Click it to activate your account, then log in.
-            </CardDescription>
+            <CardTitle className="text-xl">Account created 🎉</CardTitle>
+            <CardDescription>Your account is ready — log in with your email and password.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">

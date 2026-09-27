@@ -27,10 +27,17 @@ function LoginForm() {
   const onSubmit = async (values: LoginInput) => {
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword(values);
+    const { error } = await supabase.auth.signInWithPassword({ ...values, email: values.email.trim().toLowerCase() });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      const msg = error.message.toLowerCase();
+      toast.error(
+        msg.includes("not confirmed")
+          ? "Your account was never activated — sign up again with the same email to activate it."
+          : msg.includes("invalid login")
+          ? "Wrong email or password."
+          : error.message
+      );
       return;
     }
     router.push(params.get("next") || "/dashboard");
@@ -42,7 +49,7 @@ function LoginForm() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Log in to continue your Study OS plan.</CardDescription>
+          <CardDescription>Log in to continue your Smart Padhai plan.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
