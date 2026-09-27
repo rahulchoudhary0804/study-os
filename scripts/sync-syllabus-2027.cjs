@@ -629,6 +629,36 @@ const JEE_NCERT = {
   },
 };
 
+// JEE Main: expected questions per paper (25 per subject × 4 marks), averaged
+// from 2024–2026 shift analyses (PW, Vedantu, esaral, Careers360). NTA does not
+// publish chapter weightage and a single shift can differ. Priority follows the
+// count: ≥2 Q/paper → P1.
+const JEE_WEIGHT = {
+  physics: {
+    "units-and-measurements": [1, 3], kinematics: [1, 3], "laws-of-motion": [1, 2], "work-energy-and-power": [1, 2],
+    "rotational-motion-system-of-particles": [2, 1], gravitation: [1, 3], "mechanical-properties-of-solids-fluids": [1, 3],
+    thermodynamics: [1, 2], "kinetic-theory-of-gases": [1, 3], "oscillations-and-waves": [1, 3], electrostatics: [2, 1],
+    "current-electricity": [2, 1], "magnetic-effects-of-current-magnetism": [2, 1], "electromagnetic-induction-alternating-current": [2, 1],
+    "electromagnetic-waves": [1, 3], "ray-optics-and-wave-optics": [2, 1], "dual-nature-of-radiation-and-matter": [1, 1],
+    "atoms-and-nuclei": [1, 2], "semiconductor-electronics": [1, 1],
+  },
+  chemistry: {
+    "some-basic-concepts-in-chemistry": [1, 3], "atomic-structure": [1, 2], "chemical-bonding-and-molecular-structure": [2, 1],
+    "chemical-thermodynamics": [1, 1], solutions: [1, 1], "equilibrium-chemical-ionic": [2, 1], "redox-reactions-and-electrochemistry": [2, 1],
+    "chemical-kinetics": [1, 1], "classification-of-elements-periodicity": [1, 2], "p-block-elements": [1, 2], "d-and-f-block-elements": [1, 1],
+    "coordination-compounds": [2, 1], "purification-characterisation-basic-principles-of-organic-chemistry-goc": [2, 1], hydrocarbons: [1, 2],
+    "haloalkanes-and-haloarenes": [1, 2], "alcohols-phenols-and-ethers": [1, 2], "aldehydes-ketones-and-carboxylic-acids": [2, 1], amines: [1, 1],
+    biomolecules: [1, 2],
+  },
+  mathematics: {
+    "sets-relations-and-functions": [1, 2], "complex-numbers-and-quadratic-equations": [2, 1], "matrices-and-determinants": [2, 1],
+    "permutations-and-combinations": [1, 2], "binomial-theorem": [1, 2], "sequence-and-series": [2, 1],
+    "limits-continuity-differentiability-applications-of-derivatives": [3, 1], "integral-calculus-indefinite-definite-area-under-curve": [3, 1],
+    "differential-equations": [1, 2], "coordinate-geometry-straight-lines-circle-parabola-ellipse-hyperbola": [3, 1],
+    "three-dimensional-geometry": [2, 1], "vector-algebra": [1, 1], "statistics-and-probability": [2, 2], "trigonometry-ratios-identities-equations": [1, 3],
+  },
+};
+
 // ---------------------------------------------------------------------------
 const log = [];
 const note = (s) => log.push(s);
@@ -789,10 +819,38 @@ async function syncJeeNcert() {
   }
 }
 
+async function syncJeeWeight() {
+  const exam = await prisma.exam.findUniqueOrThrow({ where: { slug: "jee-main" } });
+  for (const [subjectSlug, chapters] of Object.entries(JEE_WEIGHT)) {
+    const subject = await prisma.subject.findUniqueOrThrow({ where: { examId_slug: { examId: exam.id, slug: subjectSlug } } });
+    const total = Object.values(chapters).reduce((n, [q]) => n + q, 0);
+    note(`JEE ${subjectSlug}: ${total} Q/paper mapped`);
+    for (const [slug, [q, priority]] of Object.entries(chapters)) {
+      const ch = await prisma.chapter.findUnique({ where: { subjectId_slug: { subjectId: subject.id, slug } } });
+      if (!ch) { note(` ! missing ${slug}`); continue; }
+      const marks = `≈${q} Q · ${q * 4} marks`;
+      if (ch.priority !== priority) note(` ~ ${slug} P${ch.priority} → P${priority}`);
+      if (DRY) continue;
+      await prisma.chapter.update({
+        where: { id: ch.id },
+        data: {
+          priority,
+          pyqTrend: {
+            ...(ch.pyqTrend ?? {}),
+            marks,
+            questionsPerPaper: q,
+          },
+        },
+      });
+    }
+  }
+}
+
 (async () => {
   await syncRbse();
   await syncJee();
   await syncJeeNcert();
+  await syncJeeWeight();
   console.log(log.join("\n"));
   console.log(DRY ? "\n(dry run — nothing written)" : "\nSyllabus synced.");
   await prisma.$disconnect();
