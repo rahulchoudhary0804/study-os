@@ -9,7 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-export const APK_URL = "/downloads/study-os.apk";
+export const APK_URL = "/downloads/smart-padhai.apk";
 
 const DISMISS_KEY = "study-os-install-dismissed-at";
 const DISMISS_DAYS = 7;
@@ -108,7 +108,7 @@ export function PwaInstallPrompt() {
         {platform === "android" ? <Smartphone className="size-4.5" /> : <Download className="size-4.5" />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">Install Study OS</p>
+        <p className="text-sm font-semibold">Install Smart Padhai</p>
         {platform === "ios" ? (
           <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
             Tap <Share className="size-3.5 inline" /> Share, then &quot;Add to Home Screen&quot;.
@@ -126,7 +126,7 @@ export function PwaInstallPrompt() {
         <div className="flex flex-wrap gap-2 mt-3">
           {platform === "android" && (
             <Button size="sm" asChild>
-              <a href={APK_URL} download="StudyOS.apk" onClick={() => setTimeout(dismiss, 500)}>
+              <a href={APK_URL} download="SmartPadhai.apk" onClick={() => setTimeout(dismiss, 500)}>
                 <Download className="size-3.5" /> Download App (APK)
               </a>
             </Button>

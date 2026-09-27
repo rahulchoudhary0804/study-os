@@ -40,11 +40,11 @@ export default async function SettingsPage() {
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
             Download the APK, open it, and tap Install. If Android asks, allow your browser to &quot;install unknown
-            apps&quot;. The app always shows the latest version of Study OS — no updates needed.
+            apps&quot;. The app always shows the latest version of Smart Padhai — no updates needed.
           </p>
           <Button asChild size="sm">
-            <a href="/downloads/study-os.apk" download="StudyOS.apk">
-              <Download className="size-4" /> Download Study OS for Android
+            <a href="/downloads/smart-padhai.apk" download="SmartPadhai.apk">
+              <Download className="size-4" /> Download Smart Padhai for Android
             </a>
           </Button>
         </CardContent>

@@ -1,5 +1,5 @@
 /**
- * Builds the Study OS Android app (a Trusted Web Activity wrapping the live
+ * Builds the Smart Padhai Android app (a Trusted Web Activity wrapping the live
  * site) with Google's Bubblewrap tooling.
  *
  *   node android-twa/build-apk.cjs
@@ -8,7 +8,7 @@
  * (ANDROID_HOME or %LOCALAPPDATA%\Android\Sdk), and `npm i @bubblewrap/core`
  * available to this script (BUBBLEWRAP_DIR can point at its node_modules).
  *
- * Output: public/downloads/study-os.apk + public/.well-known/assetlinks.json
+ * Output: public/downloads/smart-padhai.apk + public/.well-known/assetlinks.json
  * The signing keystore lives in android-twa/keystore (git-ignored) — KEEP IT:
  * every future update must be signed with the same key or phones will refuse
  * to install it over the old version.
@@ -61,8 +61,8 @@ function run(cmd, args, opts = {}) {
   const twa = bw.TwaManifest.fromWebManifestJson(manifestUrl, manifest);
   twa.packageId = PACKAGE_ID;
   twa.host = HOST;
-  twa.name = "Study OS";
-  twa.launcherName = "Study OS";
+  twa.name = "Smart Padhai";
+  twa.launcherName = "Smart Padhai";
   twa.startUrl = "/dashboard";
   twa.appVersionCode = APP_VERSION_CODE;
   twa.appVersionName = APP_VERSION_NAME;
@@ -93,7 +93,7 @@ function run(cmd, args, opts = {}) {
     run(keytool, [
       "-genkeypair", "-v", "-keystore", keystore, "-alias", "studyos", "-keyalg", "RSA", "-keysize", "2048",
       "-validity", "10000", "-storepass", password, "-keypass", password,
-      "-dname", "CN=Study OS, OU=Study OS, O=Study OS, C=IN",
+      "-dname", "CN=Smart Padhai, OU=Smart Padhai, O=Smart Padhai, C=IN",
     ]);
   }
 
@@ -107,7 +107,7 @@ function run(cmd, args, opts = {}) {
   const aligned = path.join(work, "app-release-aligned.apk");
   const outDir = path.join(root, "public", "downloads");
   fs.mkdirSync(outDir, { recursive: true });
-  const signed = path.join(outDir, "study-os.apk");
+  const signed = path.join(outDir, "smart-padhai.apk");
   run(path.join(bt, "zipalign.exe"), ["-v", "-f", "-p", "4", unsigned, aligned], { stdio: "ignore" });
   run(path.join(bt, "apksigner.bat"), [
     "sign", "--ks", keystore, "--ks-key-alias", "studyos", "--ks-pass", `pass:${password}`,

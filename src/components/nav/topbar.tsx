@@ -18,7 +18,7 @@ import { LogoutMenuItem, MobileSearch, MobileThemeMenuItems } from "@/components
 import { cn } from "@/lib/utils";
 
 /**
- * Mobile:  [logo · Study OS] ………… [search] [streak] [avatar ▾ (theme, settings)]
+ * Mobile:  [logo · Smart Padhai] ………… [search] [streak] [avatar ▾ (theme, settings)]
  * Desktop: [search ……………]  ………… [rank] [streak] [style] [light/dark] [avatar ▾]
  * (On desktop the app name lives in the sidebar.)
  */
@@ -39,7 +39,7 @@ export function Topbar({
         <span className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shrink-0 border-2 border-border shadow-nb-sm">
           <GraduationCap className="size-4.5" />
         </span>
-        <span className="font-semibold tracking-tight truncate">Study OS</span>
+        <span className="font-semibold tracking-tight truncate">Smart Padhai</span>
       </Link>
 
       <div className="hidden md:block flex-1 max-w-md">

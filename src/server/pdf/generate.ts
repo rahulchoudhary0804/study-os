@@ -59,7 +59,7 @@ export async function buildExamPdf(examId: string) {
     },
   });
   const body =
-    coverPage("Study OS", exam.name, exam.description ?? "Complete Chapter & Topic Priority Guide") +
+    coverPage("Smart Padhai", exam.name, exam.description ?? "Complete Chapter & Topic Priority Guide") +
     exam.subjects
       .map(
         (s) => `<div class="page"><h2>${esc(s.name)}</h2>${s.chapters.map((c) => chapterCard(c)).join("")}</div>`
@@ -99,7 +99,7 @@ export async function buildWeakTopicReportPdf(userId: string) {
   const weak = await getWeakTopics(userId, 30);
   const rows = weak.map((t) => [esc(t.name), esc(t.subjectName), esc(t.level), t.accuracyPercent !== null ? `${t.accuracyPercent}%` : "—", String(t.attemptsCount)]);
   const body =
-    coverPage("Study OS", "Weak Topic Report", "Rule-based weakness scoring across your engaged topics") +
+    coverPage("Smart Padhai", "Weak Topic Report", "Rule-based weakness scoring across your engaged topics") +
     `<div class="page">${table(["Topic", "Subject", "Level", "Accuracy", "Attempts"], rows)}</div>`;
   return { html: wrap(body, "#dc2626", "#7f1d1d"), filename: "Weak_Topic_Report.pdf" };
 }
@@ -107,7 +107,7 @@ export async function buildWeakTopicReportPdf(userId: string) {
 export async function buildWeeklyReportPdf(userId: string) {
   const data = await getAnalyticsData(userId);
   const body =
-    coverPage("Study OS", "Weekly Study Report", new Date().toLocaleDateString()) +
+    coverPage("Smart Padhai", "Weekly Study Report", new Date().toLocaleDateString()) +
     `<div class="page">
       ${table(
         ["Metric", "Value"],

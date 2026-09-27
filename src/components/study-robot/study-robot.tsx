@@ -10,7 +10,7 @@ const L = 48; // left eye centre x
 const R = 72; // right eye centre x
 
 /**
- * The Study OS companion robot — small glossy white body, dark glass face,
+ * The Smart Padhai companion robot — small glossy white body, dark glass face,
  * glowing blue eyes, antenna with a blue tip, black/blue ear modules and tiny
  * arms. Pure SVG + CSS animation (see themes.css "STUDY ROBOT"), so it's a
  * few KB and costs nothing to animate.

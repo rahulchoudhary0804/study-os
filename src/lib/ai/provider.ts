@@ -9,7 +9,7 @@ export interface AIGenerateOptions {
 }
 
 /**
- * Every AI feature in Study OS goes through this interface. Swapping models
+ * Every AI feature in Smart Padhai goes through this interface. Swapping models
  * or vendors means writing one new class and pointing AI_PROVIDER at it —
  * nothing else in the app changes.
  */

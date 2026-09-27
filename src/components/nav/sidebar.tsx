@@ -16,7 +16,7 @@ export function Sidebar() {
           <GraduationCap className="size-4" />
         </div>
         <Link href="/dashboard" className="font-semibold tracking-tight">
-          Study OS
+          Smart Padhai
         </Link>
       </div>
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">

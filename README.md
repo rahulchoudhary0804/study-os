@@ -1,4 +1,4 @@
-# Study OS
+# Smart Padhai
 
 **AI-Powered JEE Main + RBSE Class 12 Study Tracker**
 _Plan. Study. Practice. Improve._
@@ -147,7 +147,7 @@ the export page falls back to printing the same HTML in the browser ("Save as PD
 
 ### 3.7a Android app (APK)
 
-`public/downloads/study-os.apk` is a Trusted Web Activity wrapping the live site, built with
+`public/downloads/smart-padhai.apk` is a Trusted Web Activity wrapping the live site, built with
 Google's Bubblewrap. To rebuild (e.g. after changing the icon/name/host):
 
 ```bash
