@@ -14,10 +14,13 @@ import { createClient } from "@/lib/supabase/client";
 import { signupSchema, type SignupInput } from "@/lib/validations/auth";
 import { signUpAction } from "@/server/actions/auth";
 
+// Must match the message signUpAction returns when SUPABASE_SERVICE_ROLE_KEY is missing.
+const NOT_CONFIGURED = "Sign-up isn't configured on the server.";
+
 export default function SignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<null | "created" | "confirm">(null);
   const {
     register,
     handleSubmit,
@@ -29,18 +32,34 @@ export default function SignupPage() {
     // Account is created (pre-confirmed) on the server — no confirmation email,
     // so no Supabase email rate limit — then we sign straight in.
     const created = await signUpAction(values).catch(() => ({ ok: false as const, error: "Network error — please try again." }));
+    const supabase = createClient();
+    if (!created.ok && created.error === NOT_CONFIGURED) {
+      // Server has no service-role key: fall back to the regular email-confirmation sign-up.
+      const { error } = await supabase.auth.signUp({
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+        options: { data: { full_name: values.fullName }, emailRedirectTo: `${location.origin}/auth/callback` },
+      });
+      setLoading(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Check your email to confirm your account.");
+      setSent("confirm");
+      return;
+    }
     if (!created.ok) {
       setLoading(false);
       toast.error(created.error);
       return;
     }
-    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email: values.email.trim().toLowerCase(), password: values.password });
     setLoading(false);
     if (error) {
       // Account exists; let them log in manually rather than leaving them stuck.
       toast.success("Account created — please log in.");
-      setSent(true);
+      setSent("created");
       return;
     }
     toast.success("Account created");
@@ -53,8 +72,8 @@ export default function SignupPage() {
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Account created 🎉</CardTitle>
-            <CardDescription>Your account is ready — log in with your email and password.</CardDescription>
+            <CardTitle className="text-xl">{sent === "confirm" ? "Check your email 📩" : "Account created 🎉"}</CardTitle>
+            <CardDescription>{sent === "confirm" ? "Open the confirmation link we sent you, then log in." : "Your account is ready — log in with your email and password."}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
