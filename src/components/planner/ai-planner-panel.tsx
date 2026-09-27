@@ -24,6 +24,10 @@ import { cn } from "@/lib/utils";
 
 type Mode = "today" | "full";
 
+type PlannedDay = Omit<AIPlan, "dailyPlan"> & {
+  dailyPlan: (AIPlan["dailyPlan"][number] & { topicId?: string })[];
+};
+
 interface FullPlanResult {
   rationale: string;
   weeklyFocus: string[];
@@ -33,7 +37,7 @@ interface FullPlanResult {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return new Date(iso + "T00:00:00Z").toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; name: string }[]; hasExamDate: boolean }) {
@@ -44,10 +48,11 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
   const [level, setLevel] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [priorities, setPriorities] = useState("");
-  const [plan, setPlan] = useState<AIPlan | null>(null);
+  const [plan, setPlan] = useState<PlannedDay | null>(null);
   const [fullPlan, setFullPlan] = useState<FullPlanResult | null>(null);
   const [isPending, startTransition] = useTransition();
   const [applied, setApplied] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   function generate() {
     if (!examId) return;
@@ -60,7 +65,7 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
             preparationLevel: level || undefined,
             preferredStudyTime: preferredTime || undefined,
             priorities: priorities || undefined,
-          })) as AIPlan;
+          })) as PlannedDay;
           setPlan(result);
           setFullPlan(null);
         } else {
@@ -71,25 +76,43 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
         setApplied(false);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
-        toast.error(msg.includes("AI_NOT_CONFIGURED") ? "AI isn't configured — add GEMINI_API_KEY." : "Couldn't generate a plan right now.");
+        toast.error(
+          msg.includes("AI_NOT_CONFIGURED")
+            ? "AI isn't configured — add GEMINI_API_KEY."
+            : msg.includes("RATE_LIMITED")
+            ? "Too many AI requests — wait a minute and try again."
+            : "Couldn't generate a plan right now — please try again."
+        );
       }
     });
   }
 
   async function apply() {
-    if (mode === "today" && plan) {
-      await applyPlanToTodayAction({
-        rationale: plan.rationale,
-        items: plan.dailyPlan.map((i) => ({ label: i.label, startTime: i.startTime, endTime: i.endTime, topicName: i.topicName })),
-      });
-      setApplied(true);
-      toast.success("Applied to today's targets");
-      router.refresh();
-    } else if (mode === "full" && fullPlan) {
-      await applyFullPlanAction({ rationale: fullPlan.rationale, schedule: fullPlan.schedule });
-      setApplied(true);
-      toast.success(`Applied ${fullPlan.schedule.length} days to your schedule`);
-      router.refresh();
+    setApplying(true);
+    try {
+      if (mode === "today" && plan) {
+        await applyPlanToTodayAction({
+          rationale: plan.rationale,
+          items: plan.dailyPlan.map((i) => ({
+            label: i.label,
+            startTime: i.startTime || undefined,
+            endTime: i.endTime || undefined,
+            topicId: i.topicId,
+          })),
+        });
+        setApplied(true);
+        toast.success("Applied to today's plan", { action: { label: "Open", onClick: () => router.push("/plan") } });
+        router.refresh();
+      } else if (mode === "full" && fullPlan) {
+        await applyFullPlanAction({ rationale: fullPlan.rationale, schedule: fullPlan.schedule });
+        setApplied(true);
+        toast.success(`Applied ${fullPlan.schedule.length} days to your schedule`);
+        router.refresh();
+      }
+    } catch {
+      toast.error("Couldn't save the plan — please try again.");
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -182,7 +205,7 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
             <Badge variant="secondary" className="bg-primary/10 text-primary">
               <Sparkles className="size-3 mr-1" /> AI Generated — based on your real progress data
             </Badge>
-            <Button size="sm" onClick={apply} disabled={applied}>
+            <Button size="sm" onClick={apply} disabled={applied || applying}>
               <CalendarCheck className="size-3.5 mr-1.5" /> {applied ? "Applied" : "Apply to Today's Targets"}
             </Button>
           </div>
@@ -204,7 +227,15 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
               {plan.dailyPlan.map((item, i) => (
                 <div key={i} className="py-2.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{item.label}</p>
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      {item.chapterName && (
+                        <p className="text-xs text-muted-foreground">
+                          {item.subjectName ? `${item.subjectName} → ` : ""}
+                          {item.chapterName}
+                        </p>
+                      )}
+                    </div>
                     {(item.startTime || item.endTime) && (
                       <span className="text-xs text-muted-foreground">
                         {item.startTime}–{item.endTime}
@@ -252,7 +283,7 @@ export function AIPlannerPanel({ exams, hasExamDate }: { exams: { id: string; na
             <Badge variant="secondary" className="bg-primary/10 text-primary">
               <Sparkles className="size-3 mr-1" /> AI Generated — {fullPlan.schedule.length} days scheduled
             </Badge>
-            <Button size="sm" onClick={apply} disabled={applied}>
+            <Button size="sm" onClick={apply} disabled={applied || applying}>
               <CalendarCheck className="size-3.5 mr-1.5" /> {applied ? "Applied" : `Apply all ${fullPlan.schedule.length} days`}
             </Button>
           </div>

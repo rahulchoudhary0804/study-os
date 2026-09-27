@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PriorityBadge } from "@/components/priority-badge";
 import { BookOpen } from "lucide-react";
+import { weightageLabel } from "@/server/queries/syllabus";
 
 export default async function SubjectPage({
   params,
@@ -56,6 +57,11 @@ export default async function SubjectPage({
                           <p className="font-medium text-sm">{c.name}</p>
                           {Array.isArray(c.ncertLinks) && c.ncertLinks.length > 0 && (
                             <BookOpen className="size-3.5 text-blue-500 shrink-0" aria-label="NCERT PDF available" />
+                          )}
+                          {weightageLabel(c.pyqTrend) && (
+                            <span className="ml-auto shrink-0 rounded-full border-2 border-border px-2 py-0.5 text-[11px] font-semibold">
+                              {weightageLabel(c.pyqTrend)}
+                            </span>
                           )}
                         </div>
                         {c.importance && (

@@ -26,9 +26,11 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the JWT locally (no round-trip to Supabase Auth on
+  // every request) when the project uses asymmetric signing keys, and still
+  // refreshes an expired session via the cookie handlers above.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.includes(path) || path.startsWith("/_next");

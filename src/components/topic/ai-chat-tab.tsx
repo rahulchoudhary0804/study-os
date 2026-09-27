@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,15 +25,20 @@ const MODES: { value: Mode; label: string }[] = [
   { value: "hint", label: "Give Hint" },
 ];
 
-export function AIChatTab({ topicId }: { topicId: string }) {
+export function AIChatTab({ topicId }: { topicId?: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<Mode>("default");
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [isPending, startTransition] = useTransition();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages.length, isPending]);
 
   function send(message: string) {
-    if (!message.trim()) return;
+    if (!message.trim() || isPending) return;
     setMessages((m) => [...m, { role: "USER", content: message }]);
     setInput("");
     startTransition(async () => {
@@ -44,8 +49,15 @@ export function AIChatTab({ topicId }: { topicId: string }) {
         setMessages((m) => [...m, { role: "ASSISTANT", content: result.answer, followUps: result.followUpSuggestions }]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
-        toast.error(msg.includes("AI_NOT_CONFIGURED") ? "AI isn't configured — add GEMINI_API_KEY." : "The assistant couldn't respond.");
+        toast.error(
+          msg.includes("AI_NOT_CONFIGURED")
+            ? "AI isn't configured — add GEMINI_API_KEY."
+            : msg.includes("RATE_LIMITED")
+            ? "Too many questions in a minute — wait a moment and ask again."
+            : "The assistant couldn't respond — please ask again."
+        );
         setMessages((m) => m.slice(0, -1));
+        setInput(message);
       }
     });
   }
@@ -61,11 +73,11 @@ export function AIChatTab({ topicId }: { topicId: string }) {
       </div>
 
       <Card>
-        <CardContent className="pt-6 space-y-4 min-h-[240px] max-h-[480px] overflow-y-auto">
+        <CardContent ref={scrollRef} className="pt-6 space-y-4 min-h-[240px] max-h-[60vh] overflow-y-auto overscroll-contain">
           {messages.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Ask anything about this topic. For problem-solving, I&apos;ll give a hint before the full solution
-              unless you ask for it directly.
+              {topicId ? "Ask anything about this topic" : "Ask any doubt"} — and keep asking follow-ups in the same chat.
+              For problem-solving I&apos;ll give a hint first unless you ask for the full solution.
             </p>
           )}
           {messages.map((m, i) => (
@@ -121,7 +133,7 @@ export function AIChatTab({ topicId }: { topicId: string }) {
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question about this topic…"
+          placeholder={messages.length ? "Ask a follow-up question…" : "Ask a question…"}
           className="min-h-10 resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

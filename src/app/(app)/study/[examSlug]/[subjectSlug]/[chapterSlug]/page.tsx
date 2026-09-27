@@ -39,7 +39,7 @@ export default async function ChapterPage({
   });
   if (!chapter) notFound();
 
-  const pyq = chapter.pyqTrend as { freq?: string; historical?: string; pattern?: string; difficulty?: string } | null;
+  const pyq = chapter.pyqTrend as { marks?: string; freq?: string; historical?: string; pattern?: string; difficulty?: string } | null;
   const ncertLinks = (chapter.ncertLinks as { title: string; url: string }[] | null) ?? [];
 
   return (
@@ -92,11 +92,20 @@ export default async function ChapterPage({
       {pyq && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">PYQ Trend</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              {chapter.subject.exam.slug.includes("rbse") ? "Board Marks & Question Pattern" : "PYQ Trend"}
+              {pyq.marks && (
+                <span className="rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-xs font-semibold">
+                  {pyq.marks}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
             <div>
-              <span className="text-xs font-medium text-muted-foreground uppercase">Frequency</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase">
+                {pyq.marks ? "Marks weightage" : "Frequency"}
+              </span>
               <p>{pyq.freq}</p>
             </div>
             <div>

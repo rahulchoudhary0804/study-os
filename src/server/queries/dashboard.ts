@@ -3,6 +3,7 @@ import { startOfDay, differenceInCalendarDays } from "date-fns";
 import { getOverallProgress } from "./progress";
 import { getWeakTopics } from "./weakness";
 import { getDueRevisions } from "./revision";
+import { appToday } from "@/lib/dates";
 import type { Profile } from "@prisma/client";
 
 export async function getDashboardData(profile: Profile) {
@@ -12,7 +13,7 @@ export async function getDashboardData(profile: Profile) {
     prisma.streak.findUnique({ where: { userId: profile.id } }),
     prisma.studyDayLog.findUnique({ where: { userId_date: { userId: profile.id, date: today } } }),
     prisma.dailyTarget.findUnique({
-      where: { userId_date: { userId: profile.id, date: today } },
+      where: { userId_date: { userId: profile.id, date: appToday() } },
       include: {
         items: {
           orderBy: { order: "asc" },

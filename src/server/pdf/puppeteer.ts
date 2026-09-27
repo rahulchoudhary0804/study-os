@@ -1,16 +1,35 @@
-import puppeteer from "puppeteer";
+import type { Browser } from "puppeteer-core";
 
 /**
- * Renders HTML to a PDF buffer via headless Chromium. Works out of the box
- * for local dev and traditional Node hosting. On serverless platforms
- * (Vercel, etc.) swap this for `puppeteer-core` + `@sparticuz/chromium` —
- * see README "PDF generation setup".
+ * Launches headless Chromium. On Vercel/AWS Lambda the regular Puppeteer
+ * Chromium download doesn't exist (and is too big to ship), so we use the
+ * serverless build from @sparticuz/chromium; locally we use the Chromium that
+ * `puppeteer` downloaded on install.
  */
+async function launchBrowser(): Promise<Browser> {
+  const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (isServerless) {
+    const [{ default: chromium }, puppeteerCore] = await Promise.all([
+      import("@sparticuz/chromium"),
+      import("puppeteer-core"),
+    ]);
+    return puppeteerCore.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+      defaultViewport: { width: 1240, height: 1754 },
+    });
+  }
+  const puppeteer = await import("puppeteer");
+  return (await puppeteer.launch({ headless: true })) as unknown as Browser;
+}
+
 export async function renderPdfBuffer(html: string): Promise<Buffer> {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "load" });
+    // "load" not "networkidle": everything is inline, and some hosts never go idle.
+    await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
     await page.evaluateHandle("document.fonts.ready");
     const pdf = await page.pdf({
       format: "A4",

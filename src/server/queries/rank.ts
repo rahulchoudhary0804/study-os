@@ -3,18 +3,21 @@ import { computeRank, type RankResult } from "@/lib/domain/rank";
 
 /** Cheap aggregate queries (counts/sums, not the heavier per-subject analytics) feeding the rank ladder. */
 export async function getUserRank(userId: string): Promise<RankResult> {
-  const [completedTopics, sessions, attempts, revisions, streak] = await Promise.all([
-    prisma.topicProgress.count({ where: { userId, status: "COMPLETED" } }),
-    prisma.studySession.aggregate({ where: { userId }, _sum: { durationSeconds: true } }),
-    prisma.questionAttempt.findMany({ where: { userId }, select: { isCorrect: true } }),
-    prisma.revision.findMany({ where: { userId }, select: { status: true } }),
-    prisma.streak.findUnique({ where: { userId } }),
-  ]);
+  // Pure COUNT/SUM aggregates — this runs on every page (via the app layout),
+  // so it must never pull whole attempt/revision tables into memory.
+  const [completedTopics, sessions, totalAttempts, correctAttempts, totalRevisions, doneRevisions, streak] =
+    await Promise.all([
+      prisma.topicProgress.count({ where: { userId, status: "COMPLETED" } }),
+      prisma.studySession.aggregate({ where: { userId }, _sum: { durationSeconds: true } }),
+      prisma.questionAttempt.count({ where: { userId } }),
+      prisma.questionAttempt.count({ where: { userId, isCorrect: true } }),
+      prisma.revision.count({ where: { userId } }),
+      prisma.revision.count({ where: { userId, status: "DONE" } }),
+      prisma.streak.findUnique({ where: { userId } }),
+    ]);
 
-  const totalAttempts = attempts.length;
-  const accuracyPercent = totalAttempts > 0 ? Math.round((attempts.filter((a) => a.isCorrect).length / totalAttempts) * 100) : null;
-  const revisionCompletionRate =
-    revisions.length > 0 ? Math.round((revisions.filter((r) => r.status === "DONE").length / revisions.length) * 100) : 0;
+  const accuracyPercent = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : null;
+  const revisionCompletionRate = totalRevisions > 0 ? Math.round((doneRevisions / totalRevisions) * 100) : 0;
 
   return computeRank({
     completedTopics,

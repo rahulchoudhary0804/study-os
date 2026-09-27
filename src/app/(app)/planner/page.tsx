@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { addDays, startOfDay } from "date-fns";
+import { addAppDays, appToday } from "@/lib/dates";
 import { AIPlannerPanel } from "@/components/planner/ai-planner-panel";
 import { UpcomingScheduleBrowser } from "@/components/planner/upcoming-schedule-browser";
 import { getUpcomingSchedule } from "@/server/queries/planner";
@@ -8,8 +8,8 @@ import { getUpcomingSchedule } from "@/server/queries/planner";
 export default async function PlannerPage() {
   const { profile } = await requireUser();
   const exams = await prisma.exam.findMany({ where: { isActive: true }, orderBy: { order: "asc" } });
-  const today = startOfDay(new Date());
-  const upcoming = await getUpcomingSchedule(profile.id, today, addDays(today, 90));
+  const today = appToday();
+  const upcoming = await getUpcomingSchedule(profile.id, today, addAppDays(today, 90));
 
   return (
     <div className="space-y-6">

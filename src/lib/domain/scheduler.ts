@@ -36,10 +36,10 @@ export function buildFullSchedule({
   const dailyBudgetMinutes = Math.max(15, hoursPerDay * 60);
   const days: ScheduledDay[] = [];
 
-  let cursor = new Date(startDate);
-  cursor.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(0, 0, 0, 0);
+  // Dates are UTC-midnight calendar days (see src/lib/dates.ts) — use UTC math
+  // so the result doesn't shift by a day depending on the server time zone.
+  let cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+  const end = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
 
   let topicIndex = 0;
   let dayCount = 0;
@@ -62,8 +62,7 @@ export function buildFullSchedule({
       days.push({ date: new Date(cursor), topicIds: dayTopicIds });
     }
 
-    cursor = new Date(cursor);
-    cursor.setDate(cursor.getDate() + 1);
+    cursor = new Date(cursor.getTime() + 86_400_000);
     dayCount++;
   }
 

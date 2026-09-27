@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { signOutAction } from "@/server/actions/auth";
 import { SearchBox } from "@/components/search/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { StylePicker } from "@/components/theme-style";
 import type { RankResult } from "@/lib/domain/rank";
 import { RankBadgeIcon } from "@/components/rank/rank-badge-icon";
 import { RankBadgeButton } from "@/components/rank/rank-list-dialog";
@@ -28,7 +29,7 @@ export function Topbar({
   const initial = email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <header className="h-14 border-b-2 border-border flex items-center gap-3 px-4 md:px-6 shrink-0 sticky top-0 z-30 bg-background/70 backdrop-blur-lg">
+    <header className="h-14 border-b-2 border-border flex items-center gap-3 px-4 md:px-6 shrink-0 sticky top-0 z-30 bg-background/90 backdrop-blur-lg">
       <div className="flex-1 max-w-md">
         <SearchBox />
       </div>
@@ -40,6 +41,7 @@ export function Topbar({
         <Flame className="size-4" />
         {currentStreak}
       </Link>
+      <StylePicker />
       <ThemeToggle />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUserAction } from "@/lib/auth";
@@ -33,6 +33,7 @@ export async function updateChapterAction(input: z.infer<typeof updateChapterSch
   const { id, ...data } = updateChapterSchema.parse(input);
   await prisma.chapter.update({ where: { id }, data });
   revalidatePath("/admin/content");
+  revalidateTag("syllabus", { expire: 0 });
 }
 
 const updateTopicSchema = z.object({
@@ -47,6 +48,7 @@ export async function updateTopicAction(input: z.infer<typeof updateTopicSchema>
   const { id, ...data } = updateTopicSchema.parse(input);
   await prisma.topic.update({ where: { id }, data });
   revalidatePath("/admin/content");
+  revalidateTag("syllabus", { expire: 0 });
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +118,7 @@ export async function importSyllabusJsonAction(jsonText: string) {
   }
 
   revalidatePath("/admin/content");
+  revalidateTag("syllabus", { expire: 0 });
   revalidatePath("/admin");
   return { chapterCount, topicCount };
 }

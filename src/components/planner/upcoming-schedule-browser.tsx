@@ -9,7 +9,8 @@ import { TargetItemRow } from "@/components/dashboard/target-item-row";
 import type { UpcomingScheduleDay } from "@/server/queries/planner";
 
 function formatDate(date: Date) {
-  return new Date(date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  // UTC-midnight calendar date (see src/lib/dates.ts) — format in UTC so it never shifts a day.
+  return new Date(date).toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export function UpcomingScheduleBrowser({ days }: { days: UpcomingScheduleDay[] }) {

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 8;
+const MAX_PER_WINDOW = 20;
 
 /**
  * Simple DB-backed rate limit for AI endpoints (Section 34 — AI cost

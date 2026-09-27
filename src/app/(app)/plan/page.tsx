@@ -1,50 +1,102 @@
 import Link from "next/link";
-import { startOfDay } from "date-fns";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { appToday, formatAppDate } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { TargetItemRow } from "@/components/dashboard/target-item-row";
 import { AddTargetForm } from "@/components/plan/add-target-form";
-import { Bot, ArrowRight } from "lucide-react";
+import { PlanTopicPicker } from "@/components/plan/plan-topic-picker";
+import { ClearPlanButton } from "@/components/plan/clear-plan-button";
+import { getSyllabusTree } from "@/server/queries/syllabus";
+import type { SwapOption } from "@/components/plan/swap-topic-button";
+import type { NcertLink } from "@/components/dashboard/target-item-row";
+import { Bot, ArrowRight, ListChecks, Target } from "lucide-react";
 
 export default async function PlanPage() {
   const { profile } = await requireUser();
-  const today = startOfDay(new Date());
+  const today = appToday();
 
-  const target = await prisma.dailyTarget.findUnique({
-    where: { userId_date: { userId: profile.id, date: today } },
-    include: {
-      items: {
-        orderBy: { order: "asc" },
-        include: { topic: { include: { chapter: { include: { subject: { include: { exam: true } } } } } } },
+  const [target, tree] = await Promise.all([
+    prisma.dailyTarget.findUnique({
+      where: { userId_date: { userId: profile.id, date: today } },
+      include: {
+        items: {
+          orderBy: { order: "asc" },
+          include: {
+            topic: {
+              select: {
+                slug: true,
+                chapter: { select: { slug: true, name: true, subject: { select: { slug: true, name: true, exam: { select: { slug: true } } } } } },
+              },
+            },
+          },
+        },
       },
-    },
-  });
+    }),
+    getSyllabusTree(),
+  ]);
+
+  // topicId → NCERT links of its chapter + same-subject topics to swap with.
+  const ncertByTopic = new Map<string, NcertLink[]>();
+  const swapByTopic = new Map<string, SwapOption[]>();
+  for (const exam of tree) {
+    for (const subject of exam.subjects) {
+      const subjectTopics: SwapOption[] = subject.chapters.flatMap((c) =>
+        c.topics.map((t) => ({ id: t.id, name: t.name, chapterName: c.name }))
+      );
+      for (const chapter of subject.chapters) {
+        for (const t of chapter.topics) {
+          ncertByTopic.set(t.id, chapter.ncertLinks);
+          swapByTopic.set(t.id, subjectTopics);
+        }
+      }
+    }
+  }
+
+  const items = target?.items ?? [];
+  const doneCount = items.filter((i) => i.isDone).length;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Today&apos;s Plan</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {today.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          {formatAppDate(today, { weekday: "long", month: "long", day: "numeric" })}
         </p>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Targets</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="size-4" /> Targets
+            {items.length > 0 && (
+              <Badge variant="outline" className="ml-1">
+                {doneCount}/{items.length} done
+              </Badge>
+            )}
+            {target?.generatedByAI && (
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                <Bot className="size-3 mr-1" /> AI
+              </Badge>
+            )}
+          </CardTitle>
+          {items.length > 0 && <ClearPlanButton />}
         </CardHeader>
         <CardContent className="space-y-1 divide-y">
-          {target?.items.length ? (
-            target.items.map((item) => (
+          {target?.generatedByAI && target.aiRationale && (
+            <p className="text-xs text-muted-foreground pb-3 italic">&ldquo;{target.aiRationale}&rdquo;</p>
+          )}
+          {items.length ? (
+            items.map((item) => (
               <TargetItemRow
                 key={item.id}
                 id={item.id}
                 label={item.label}
                 subLabel={
                   item.topic
-                    ? `${item.topic.chapter.subject.name} → ${item.topic.chapter.name}`
+                    ? `${item.topic.chapter.subject.name} → ${item.topic.chapter.name}${item.startTime ? ` · ${item.startTime}${item.endTime ? `–${item.endTime}` : ""}` : ""}`
                     : item.startTime
                     ? `${item.startTime}${item.endTime ? `–${item.endTime}` : ""}`
                     : undefined
@@ -56,14 +108,43 @@ export default async function PlanPage() {
                     ? `/study/${item.topic.chapter.subject.exam.slug}/${item.topic.chapter.subject.slug}/${item.topic.chapter.slug}/${item.topic.slug}`
                     : undefined
                 }
+                ncertLinks={item.topicId ? ncertByTopic.get(item.topicId) : undefined}
+                swapOptions={item.topicId ? swapByTopic.get(item.topicId)?.filter((o) => o.id !== item.topicId) : undefined}
+                showActions
               />
             ))
           ) : (
-            <p className="text-sm text-muted-foreground py-2">No targets yet — add one below or generate a plan.</p>
+            <p className="text-sm text-muted-foreground py-2">
+              Nothing planned yet — pick chapters and topics below, or let the AI Planner build your day.
+            </p>
           )}
-          <div className="pt-4">
-            <AddTargetForm />
-          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ListChecks className="size-4" /> Add from syllabus
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Choose a subject, tick whole chapters or individual topics (sorted by priority), then add them.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <PlanTopicPicker
+            exams={tree}
+            defaultExamId={profile.targetExamId ?? undefined}
+            plannedTopicIds={items.map((i) => i.topicId).filter((x): x is string => !!x)}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Custom task</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AddTargetForm />
         </CardContent>
       </Card>
 

@@ -81,43 +81,87 @@ Difficulty: ${opts.difficulty === "MIXED" ? "a mix of easy, medium and hard" : o
 These questions are AI-generated practice material, NOT real previous-year questions. Do not claim
 they came from an actual exam paper.
 
+Rules:
+- For "MCQ": give exactly 4 "options", and "correctAnswer" must be copied EXACTLY from one of the options.
+- For "NUMERICAL" / "SUBJECTIVE": omit the "options" key entirely.
+- Math/chemistry notation: use LaTeX inside $...$ and escape every backslash for JSON (write \\\\frac, \\\\sqrt).
+
 Return ONLY JSON of this shape:
 {
   "questions": [
     {
-      "question": string,
-      "questionType": "MCQ" | "NUMERICAL" | "SUBJECTIVE",
-      "options": string[] | undefined,
-      "correctAnswer": string,
-      "explanation": string,
-      "conceptTested": string,
-      "difficulty": "EASY" | "MEDIUM" | "HARD"
+      "question": "...",
+      "questionType": "MCQ",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": "...",
+      "explanation": "...",
+      "conceptTested": "...",
+      "difficulty": "EASY"
     }
   ]
 }`;
 }
 
-export function buildExplainPrompt(ctx: TopicContext, userMessage: string, mode?: string): string {
+export interface ChatTurn {
+  role: "USER" | "ASSISTANT";
+  content: string;
+}
+
+/**
+ * Plain-text (markdown) chat prompt — deliberately NOT JSON, so long
+ * LaTeX-heavy answers can't fail a JSON parse. Earlier turns are included so
+ * follow-up questions ("and why is that?") keep their context.
+ */
+export function buildChatPrompt(
+  ctx: TopicContext | null,
+  history: ChatTurn[],
+  userMessage: string,
+  mode?: string
+): string {
   const modeInstruction =
     mode === "simple"
       ? "Explain it as simply as possible, like to a beginner."
       : mode === "hinglish"
-      ? "Explain in Hinglish (mix of Hindi and English, written in Roman script)."
+      ? "Reply in Hinglish (mix of Hindi and English, written in Roman script)."
       : mode === "hint"
       ? "Give a HINT only — do not give the full solution unless the student explicitly asks for it."
       : "Explain clearly and precisely, at Class 12 level.";
 
-  return `You are a patient AI study assistant embedded in a topic page.
+  const context = ctx
+    ? `Current topic: ${ctx.examName} → ${ctx.subjectName} → ${ctx.chapterName} → ${ctx.topicName}`
+    : "No specific topic selected — the student is preparing for JEE Main and the RBSE Class 12 board exam.";
 
-Current context: ${ctx.examName} → ${ctx.subjectName} → ${ctx.chapterName} → ${ctx.topicName}
+  const transcript = history
+    .slice(-10)
+    .map((t) => `${t.role === "USER" ? "Student" : "Assistant"}: ${t.content}`)
+    .join("\n\n");
 
-Student's message: "${userMessage}"
+  return `You are a patient AI study tutor for a Class 12 student (JEE Main + RBSE board).
+
+${context}
+${transcript ? `\nConversation so far:\n${transcript}\n` : ""}
+Student's new message: ${userMessage}
 
 Instruction: ${modeInstruction}
-For any question-solving request, default to giving a hint or approach before the full solution,
-unless the student explicitly asks for the complete solution.
+For problem-solving, give the approach/hint first unless the student asks for the full solution.
+Format in Markdown; write math in LaTeX between $...$ (inline) or $$...$$ (display).
+Keep it focused — no preamble.
 
-Return ONLY JSON: { "answer": string, "followUpSuggestions": string[] }`;
+After your answer, on the very last line, write exactly:
+FOLLOWUPS: <question 1> | <question 2> | <question 3>
+(three short follow-up questions the student might ask next).`;
+}
+
+/** Splits the trailing "FOLLOWUPS:" line off a chat reply. */
+export function splitFollowUps(text: string): { answer: string; followUps: string[] } {
+  const match = text.match(/\n?\s*\**FOLLOW-?UPS\**:?\**\s*(.+)\s*$/i);
+  if (!match) return { answer: text.trim(), followUps: [] };
+  const followUps = match[1]
+    .split("|")
+    .map((q) => q.trim().replace(/^[-*\d.)\s]+/, ""))
+    .filter((q) => q.length > 3)
+    .slice(0, 3);
+  return { answer: text.slice(0, match.index).trim(), followUps };
 }
 
 export interface PlannerUserInput {
@@ -127,6 +171,15 @@ export interface PlannerUserInput {
   preparationLevel?: string;
   preferredStudyTime?: string | null;
   priorities?: string;
+}
+
+export interface PlannerCandidateTopic {
+  ref: string; // short id like "T7" the model echoes back
+  name: string;
+  chapterName: string;
+  subjectName: string;
+  priority: number;
+  reason: string; // why it's a candidate: "weak", "revision due", "high priority"...
 }
 
 export interface PlannerDbState {
@@ -177,32 +230,47 @@ Return ONLY JSON:
 }`;
 }
 
-export function buildPlannerPrompt(input: PlannerUserInput, state: PlannerDbState): string {
-  return `You are an AI study planner. Build a REALISTIC, personalized plan using the student's
+export function buildPlannerPrompt(
+  input: PlannerUserInput,
+  state: PlannerDbState,
+  candidates: PlannerCandidateTopic[]
+): string {
+  const catalog = candidates
+    .map((c) => `${c.ref} | ${c.subjectName} → ${c.chapterName} → ${c.name} | P${c.priority} | ${c.reason}`)
+    .join("\n");
+
+  return `You are an AI study planner. Build a REALISTIC, personalized plan for TODAY using the student's
 actual data below — do not produce a generic template.
 
 Target exam: ${input.examName}
 Exam date: ${input.examDate ?? "not set"}
-Available study hours/day: ${input.availableHoursPerDay}
+Available study hours today: ${input.availableHoursPerDay}
 Self-rated preparation level: ${input.preparationLevel ?? "not specified"}
 Preferred study time: ${input.preferredStudyTime ?? "not specified"}
 Extra priorities from student: ${input.priorities ?? "none"}
 
 Current database state:
 - Completed topics (${state.completedTopics.length}): ${state.completedTopics.slice(0, 30).join(", ") || "none yet"}
-- Remaining high-priority topics (${state.remainingHighPriorityTopics.length}): ${state.remainingHighPriorityTopics.slice(0, 30).join(", ") || "none"}
 - Weak topics (accuracy shown): ${state.weakTopics.map((t) => `${t.name} (${t.accuracy}%)`).join(", ") || "none identified yet"}
 - Topics with revision due: ${state.revisionDueTopics.slice(0, 20).join(", ") || "none"}
 - Recent average study hours/day: ${state.recentStudyHoursPerDay}
 
-Build today's plan around: weak topics and revision-due topics first, then remaining high-priority
-topics, respecting the available hours. Be specific about which subject/chapter/topic each block covers.
+Candidate topics (ref | subject → chapter → topic | priority | why):
+${catalog || "(none)"}
+
+Rules:
+- Every study block MUST pick a topic from the candidate list and put its ref in "topicRef" (e.g. "T3").
+- Order: revision-due and weak topics first, then Priority 1, then Priority 2 — and mix subjects so the
+  day isn't all one subject.
+- Fit the blocks into ${input.availableHoursPerDay} hours total (45–90 min blocks, include short breaks
+  between blocks by leaving gaps in the times). Start at a sensible time for the preferred study time.
+- "label" = "<Subject>: <Topic>".
 
 Return ONLY JSON:
 {
-  "rationale": string,
-  "dailyPlan": [ { "startTime": "HH:MM", "endTime": "HH:MM", "label": string, "subjectName": string, "chapterName": string, "topicName": string, "reason": string } ],
-  "weeklyFocus": string[],
-  "priorityOrder": string[]
+  "rationale": "...",
+  "dailyPlan": [ { "startTime": "HH:MM", "endTime": "HH:MM", "label": "...", "topicRef": "T1", "reason": "..." } ],
+  "weeklyFocus": ["..."],
+  "priorityOrder": ["..."]
 }`;
 }

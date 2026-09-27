@@ -123,7 +123,13 @@ export function PracticeTab({ topicId, savedQuestions }: { topicId: string; save
         setBatchAttempts([]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "AI_FAILED";
-        toast.error(msg.includes("AI_NOT_CONFIGURED") ? "AI isn't configured — add GEMINI_API_KEY." : "Couldn't generate questions.");
+        toast.error(
+          msg.includes("AI_NOT_CONFIGURED")
+            ? "AI isn't configured — add GEMINI_API_KEY."
+            : msg.includes("RATE_LIMITED")
+            ? "Too many AI requests in a minute — wait a moment and try again."
+            : "Couldn't generate questions — please try again."
+        );
       }
     });
   }

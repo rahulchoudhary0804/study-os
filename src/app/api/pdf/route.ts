@@ -12,10 +12,14 @@ import {
 } from "@/server/pdf/generate";
 
 export const runtime = "nodejs";
+// Cold-starting Chromium on a serverless host can take several seconds.
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   scope: z.enum(["exam", "subject", "chapter", "topic", "weak-topics", "weekly-report"]),
   id: z.string().uuid().optional(),
+  /** "html" returns the print-ready HTML instead — the client prints it to PDF itself. */
+  format: z.enum(["pdf", "html"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
 
   const parsed = bodySchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  const { scope, id } = parsed.data;
+  const { scope, id, format } = parsed.data;
 
   try {
     let doc: { html: string; filename: string };
@@ -51,6 +55,12 @@ export async function POST(request: Request) {
       case "weekly-report":
         doc = await buildWeeklyReportPdf(user.profile.id);
         break;
+    }
+
+    if (format === "html") {
+      return new NextResponse(doc.html, {
+        headers: { "Content-Type": "text/html; charset=utf-8", "X-Filename": doc.filename },
+      });
     }
 
     const pdf = await renderPdfBuffer(doc.html);

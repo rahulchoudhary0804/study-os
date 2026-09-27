@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "katex/dist/katex.min.css";
+@import "./themes.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -55,9 +56,9 @@
      (glassmorphic fill), floating over a soft indigo gradient backdrop. */
   --background: oklch(0.97 0.015 265);
   --foreground: oklch(0.18 0.02 265);
-  --card: oklch(1 0 0 / 62%);
+  --card: oklch(1 0 0 / 88%);
   --card-foreground: oklch(0.18 0.02 265);
-  --popover: oklch(1 0 0 / 82%);
+  --popover: oklch(1 0 0 / 97%);
   --popover-foreground: oklch(0.18 0.02 265);
   --primary: oklch(0.5 0.19 265);
   --primary-foreground: oklch(0.98 0.01 265);
@@ -78,6 +79,10 @@
   --chart-5: oklch(0.65 0.2 25);
   --radius: 0.7rem;
   --nb-shadow-color: var(--border);
+  --elev-sm: 3px 3px 0px 0px var(--nb-shadow-color);
+  --elev-md: 5px 5px 0px 0px var(--nb-shadow-color);
+  --elev-lg: 8px 8px 0px 0px var(--nb-shadow-color);
+  --elev-active: 1px 1px 0px 0px var(--nb-shadow-color);
   --sidebar: oklch(1 0 0 / 55%);
   --sidebar-foreground: oklch(0.18 0.02 265);
   --sidebar-primary: oklch(0.5 0.19 265);
@@ -93,9 +98,9 @@
      surface — light, high-contrast borders instead of black ones. */
   --background: oklch(0.14 0.02 265);
   --foreground: oklch(0.96 0.008 265);
-  --card: oklch(0.24 0.03 265 / 55%);
+  --card: oklch(0.24 0.03 265 / 90%);
   --card-foreground: oklch(0.96 0.008 265);
-  --popover: oklch(0.2 0.03 265 / 88%);
+  --popover: oklch(0.2 0.03 265 / 97%);
   --popover-foreground: oklch(0.96 0.008 265);
   --primary: oklch(0.72 0.16 265);
   --primary-foreground: oklch(0.16 0.02 265);
@@ -125,17 +130,20 @@
   --sidebar-ring: oklch(0.72 0.16 265);
 }
 
+/* Elevation tokens. Every surface uses these utilities and each visual style
+   (src/app/themes.css) swaps the variables — so one component set can look
+   neo-brutalist, glassy, soft-UI, clay, flat-vector or pixel-art. */
 @utility shadow-nb-sm {
-  box-shadow: 3px 3px 0px 0px var(--nb-shadow-color);
+  box-shadow: var(--elev-sm);
 }
 @utility shadow-nb {
-  box-shadow: 5px 5px 0px 0px var(--nb-shadow-color);
+  box-shadow: var(--elev-md);
 }
 @utility shadow-nb-lg {
-  box-shadow: 8px 8px 0px 0px var(--nb-shadow-color);
+  box-shadow: var(--elev-lg);
 }
 @utility shadow-nb-active {
-  box-shadow: 1px 1px 0px 0px var(--nb-shadow-color);
+  box-shadow: var(--elev-active);
 }
 
 @layer base {

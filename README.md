@@ -141,10 +141,29 @@ rest of the app (auth, tracking, timer, revision, analytics, PDF export) works f
 Works out of the box locally — `npm install` already pulled down Puppeteer's bundled Chromium.
 No extra setup needed for local dev or a traditional Node host (Railway, Render, a VPS, etc.).
 
-**Serverless caveat (Vercel etc.):** Puppeteer's full Chromium download is too large for most
-serverless function bundles. For a serverless deployment, swap `src/server/pdf/puppeteer.ts` to
-use `puppeteer-core` + `@sparticuz/chromium` instead of `puppeteer` — the rest of the PDF pipeline
-(`src/server/pdf/generate.ts`, the `/api/pdf` route) doesn't need to change.
+**Serverless (Vercel):** handled automatically — `src/server/pdf/puppeteer.ts` switches to
+`puppeteer-core` + `@sparticuz/chromium` when `VERCEL` is set. If the server still can't render,
+the export page falls back to printing the same HTML in the browser ("Save as PDF").
+
+### 3.7a Android app (APK)
+
+`public/downloads/study-os.apk` is a Trusted Web Activity wrapping the live site, built with
+Google's Bubblewrap. To rebuild (e.g. after changing the icon/name/host):
+
+```bash
+npm i --no-save @bubblewrap/core   # or point BUBBLEWRAP_DIR at an install elsewhere
+npm run android:apk                # needs a JDK 17+ and the Android SDK
+```
+
+The signing key lives in `android-twa/keystore/` (git-ignored) — **back it up**: every future APK
+must be signed with the same key, or phones refuse to install it over the old one. The build also
+writes `public/.well-known/assetlinks.json`, which lets the app open full-screen (no URL bar).
+Bump `TWA_VERSION_CODE` for each new release.
+
+### 3.7b Syllabus sync (2026–27)
+
+`npm run syllabus:sync` (add `-- --dry-run` to preview) aligns chapters/topics/marks with the RBSE
+2026–27 and JEE Main priority handbooks. It's idempotent and never hard-deletes anything.
 
 ### 3.8 Make yourself an admin (optional)
 

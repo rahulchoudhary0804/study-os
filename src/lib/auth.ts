@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
@@ -16,36 +17,42 @@ function isAdminEmail(email: string): boolean {
   return list.includes(email.toLowerCase());
 }
 
-/** Returns the Supabase auth user + our Profile row, or null if signed out. */
-export async function getCurrentUser(): Promise<{ authId: string; email: string; profile: Profile } | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+/**
+ * Returns the Supabase auth user + our Profile row, or null if signed out.
+ *
+ * Wrapped in React `cache()` so the layout, the page and any nested server
+ * components share ONE auth check + profile query per request instead of
+ * repeating it for each caller.
+ */
+export const getCurrentUser = cache(
+  async (): Promise<{ authId: string; email: string; profile: Profile } | null> => {
+    const supabase = await createClient();
+    // Verifies the JWT locally with asymmetric signing keys (falls back to a
+    // network check on legacy projects) — far cheaper than getUser().
+    const { data } = await supabase.auth.getClaims();
+    const claims = data?.claims;
+    if (!claims?.sub) return null;
 
-  if (!user) return null;
+    const userId = claims.sub;
+    const email = typeof claims.email === "string" ? claims.email : "";
 
-  const email = user.email ?? "";
+    // The trigger in prisma/sql/001_profile_trigger_and_rls.sql creates this row
+    // automatically on signup; create it here only if it's genuinely missing.
+    let profile =
+      (await prisma.profile.findUnique({ where: { id: userId } })) ??
+      (await prisma.profile.upsert({ where: { id: userId }, update: {}, create: { id: userId, email } }));
 
-  // The trigger in prisma/sql/001_profile_trigger_and_rls.sql creates this row
-  // automatically on signup, but we upsert defensively in case it hasn't run
-  // yet (e.g. local dev before the SQL migration was applied).
-  let profile = await prisma.profile.upsert({
-    where: { id: user.id },
-    update: {},
-    create: { id: user.id, email },
-  });
+    // Auto-promote to admin if this email is listed in ADMIN_EMAILS — re-checked
+    // on every request so removing an email from the env var also revokes access,
+    // without ever writing an email address into source code.
+    const shouldBeAdmin = isAdminEmail(email || profile.email);
+    if (profile.isAdmin !== shouldBeAdmin) {
+      profile = await prisma.profile.update({ where: { id: profile.id }, data: { isAdmin: shouldBeAdmin } });
+    }
 
-  // Auto-promote to admin if this email is listed in ADMIN_EMAILS — re-checked
-  // on every request so removing an email from the env var also revokes access,
-  // without ever writing an email address into source code.
-  const shouldBeAdmin = isAdminEmail(email);
-  if (profile.isAdmin !== shouldBeAdmin) {
-    profile = await prisma.profile.update({ where: { id: profile.id }, data: { isAdmin: shouldBeAdmin } });
+    return { authId: userId, email: email || profile.email, profile };
   }
-
-  return { authId: user.id, email, profile };
-}
+);
 
 /** Same as getCurrentUser but redirects to /login if signed out. Use in pages/layouts. */
 export async function requireUser() {

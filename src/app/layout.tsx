@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, VT323, Press_Start_2P, Fredoka } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { STYLE_BOOT_SCRIPT } from "@/components/theme-style";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +17,17 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// Fonts for the optional visual styles (themes.css). preload: false — they
+// only download when a student actually switches to that style.
+const pixelFont = VT323({ variable: "--font-pixel", weight: "400", subsets: ["latin"], preload: false });
+const pixelHeadingFont = Press_Start_2P({
+  variable: "--font-pixel-heading",
+  weight: "400",
+  subsets: ["latin"],
+  preload: false,
+});
+const vectorFont = Fredoka({ variable: "--font-vector", subsets: ["latin"], preload: false });
 
 export const metadata: Metadata = {
   title: "Study OS — AI-Powered JEE Main + RBSE Class 12 Study Tracker",
@@ -36,8 +48,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} ${pixelHeadingFont.variable} ${vectorFont.variable} h-full antialiased`}
     >
+      <head>
+        {/* Applies the saved theme style before first paint (no flash). */}
+        <script dangerouslySetInnerHTML={{ __html: STYLE_BOOT_SCRIPT }} />
+      </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider delayDuration={200}>

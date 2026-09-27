@@ -147,3 +147,88 @@ export async function getUpcomingSchedule(userId: string, from: Date, to: Date):
     })),
   }));
 }
+
+export interface PlannerCandidate {
+  id: string;
+  name: string;
+  chapterName: string;
+  subjectName: string;
+  priority: number;
+  reason: string;
+}
+
+/**
+ * The shortlist the one-day AI planner picks from: revision-due and weak
+ * topics first, then unfinished high-priority topics interleaved across
+ * subjects. Giving the model real ids (instead of letting it invent topic
+ * names) is what lets an applied plan link back to actual topic pages.
+ */
+export async function getPlannerCandidates(userId: string, examId?: string, limit = 45): Promise<PlannerCandidate[]> {
+  const topicSelect = {
+    id: true,
+    name: true,
+    priority: true,
+    chapter: { select: { name: true, priority: true, subject: { select: { name: true, exam: { select: { name: true } } } } } },
+  } as const;
+
+  const [due, weak, incomplete] = await Promise.all([
+    prisma.revision.findMany({
+      where: { userId, status: { in: ["DUE", "SNOOZED"] }, dueDate: { lte: new Date() }, topic: examId ? { chapter: { subject: { examId } } } : undefined },
+      select: { topic: { select: topicSelect } },
+      take: 10,
+    }),
+    getWeakTopics(userId, 10),
+    prisma.topic.findMany({
+      where: {
+        isDeleted: false,
+        chapter: { isDeleted: false, priority: { lte: 2 }, subject: examId ? { examId } : undefined },
+        progress: { none: { userId, status: "COMPLETED" } },
+      },
+      orderBy: [{ chapter: { priority: "asc" } }, { priority: "asc" }, { chapter: { order: "asc" } }, { order: "asc" }],
+      select: topicSelect,
+      take: 150,
+    }),
+  ]);
+
+  type Row = (typeof incomplete)[number];
+  const toCandidate = (t: Row, reason: string): PlannerCandidate => ({
+    id: t.id,
+    name: t.name,
+    chapterName: t.chapter.name,
+    subjectName: examId ? t.chapter.subject.name : `${t.chapter.subject.exam.name} ${t.chapter.subject.name}`,
+    priority: Math.min(t.priority, t.chapter.priority),
+    reason,
+  });
+
+  const out: PlannerCandidate[] = [];
+  const seen = new Set<string>();
+  const push = (c: PlannerCandidate) => {
+    if (seen.has(c.id) || out.length >= limit) return;
+    seen.add(c.id);
+    out.push(c);
+  };
+
+  for (const r of due) push(toCandidate(r.topic, "revision due"));
+
+  const weakIds = weak.map((w) => w.topicId).filter((id) => !seen.has(id));
+  if (weakIds.length) {
+    const weakTopics = await prisma.topic.findMany({ where: { id: { in: weakIds } }, select: topicSelect });
+    for (const t of weakTopics) {
+      const w = weak.find((x) => x.topicId === t.id);
+      push(toCandidate(t, `weak (${w?.accuracyPercent ?? "?"}% accuracy)`));
+    }
+  }
+
+  // Round-robin across subjects so the shortlist isn't all Physics.
+  const bySubject = new Map<string, Row[]>();
+  for (const t of incomplete) {
+    const key = `${t.chapter.subject.exam.name}/${t.chapter.subject.name}`;
+    (bySubject.get(key) ?? bySubject.set(key, []).get(key)!).push(t);
+  }
+  const queues = [...bySubject.values()];
+  for (let i = 0; out.length < limit && queues.some((q) => i < q.length); i++) {
+    for (const q of queues) if (q[i]) push(toCandidate(q[i], `not started · chapter P${q[i].chapter.priority}`));
+  }
+
+  return out;
+}
