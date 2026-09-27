@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TargetItemRow } from "@/components/dashboard/target-item-row";
+import { TimeGreeting } from "@/components/dashboard/time-greeting";
 import { DashboardRobotCue } from "@/components/study-robot/robot-cue";
 import {
   Flame,
@@ -27,13 +28,6 @@ const LEVEL_BADGE: Record<string, { label: string; className: string }> = {
   strong: { label: "🟢 Strong", className: "bg-green-100 text-green-700" },
 };
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default async function DashboardPage() {
   const { profile, email } = await requireUser();
   const data = await getDashboardData(profile);
@@ -50,9 +44,7 @@ export default async function DashboardPage() {
         todayTotal={data.todayTarget?.items.length ?? 0}
       />
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {greeting()}, {name} 👋
-        </h1>
+        <TimeGreeting name={name} />
         <p className="text-sm text-muted-foreground mt-1">Here&apos;s where things stand today.</p>
       </div>
 
