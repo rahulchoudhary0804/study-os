@@ -33,7 +33,14 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims?.sub ? data.claims : null;
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.includes(path) || path.startsWith("/_next");
+  const isPublic =
+    PUBLIC_PATHS.includes(path) ||
+    path.startsWith("/_next") ||
+    // Public, indexable SEO pages + generated metadata files.
+    path === "/syllabus" ||
+    path.startsWith("/syllabus/") ||
+    path.startsWith("/opengraph-image") ||
+    path.startsWith("/twitter-image");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

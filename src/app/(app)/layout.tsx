@@ -4,6 +4,10 @@ import { Sidebar } from "@/components/nav/sidebar";
 import { Topbar } from "@/components/nav/topbar";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import { RobotFab } from "@/components/study-robot/robot-fab";
+import type { Metadata } from "next";
+
+// Private, per-student pages — keep them out of search results.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 import { PageTransition } from "@/components/nav/page-transition";
 import { getUserRank } from "@/server/queries/rank";
 

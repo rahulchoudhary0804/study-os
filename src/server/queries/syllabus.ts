@@ -10,6 +10,7 @@ export interface SyllabusTopic {
 
 export interface SyllabusChapter {
   id: string;
+  slug: string;
   name: string;
   priority: number;
   /** Short "how many marks / questions" line, e.g. "6 marks" or "1–2 Q/shift". */
@@ -20,6 +21,7 @@ export interface SyllabusChapter {
 
 export interface SyllabusSubject {
   id: string;
+  slug: string;
   name: string;
   chapters: SyllabusChapter[];
 }
@@ -93,11 +95,13 @@ export async function loadSyllabusTree(): Promise<SyllabusExam[]> {
         .filter((s) => s.chapters.some((c) => c.topics.length > 0))
         .map((s) => ({
           id: s.id,
+          slug: s.slug,
           name: s.name,
           chapters: s.chapters
             .filter((c) => c.topics.length > 0)
             .map((c) => ({
               id: c.id,
+              slug: c.slug,
               name: c.name,
               priority: c.priority,
               weightage: weightageLabel(c.pyqTrend),
@@ -113,7 +117,63 @@ export async function loadSyllabusTree(): Promise<SyllabusExam[]> {
     }));
 }
 
-export const getSyllabusTree = unstable_cache(loadSyllabusTree, ["syllabus-tree-v1"], {
+export const getSyllabusTree = unstable_cache(loadSyllabusTree, ["syllabus-tree-v3"], {
   revalidate: 3600,
   tags: ["syllabus"],
 });
+
+export interface PublicChapter {
+  slug: string;
+  name: string;
+  priority: number;
+  weightage: string | null;
+  importance: string | null;
+  pattern: string | null;
+  mustKnow: string[];
+  questionPatterns: string[];
+  ncertLinks: { title: string; url: string }[];
+  topics: { name: string; priority: number; description: string | null }[];
+}
+
+/** Everything a public (logged-out, indexable) subject syllabus page shows. */
+export const getPublicSubjectSyllabus = unstable_cache(
+  async (examSlug: string, subjectSlug: string) => {
+    const subject = await prisma.subject.findFirst({
+      where: { slug: subjectSlug, exam: { slug: examSlug, isActive: true } },
+      select: {
+        name: true,
+        exam: { select: { name: true, slug: true } },
+        chapters: {
+          where: { isDeleted: false },
+          orderBy: [{ priority: "asc" }, { order: "asc" }],
+          select: {
+            slug: true, name: true, priority: true, importance: true, pyqTrend: true, mustKnow: true,
+            questionPatterns: true, ncertLinks: true,
+            topics: { where: { isDeleted: false }, orderBy: [{ priority: "asc" }, { order: "asc" }], select: { name: true, priority: true, description: true } },
+          },
+        },
+      },
+    });
+    if (!subject) return null;
+    const arr = (v: unknown) => (Array.isArray(v) ? (v as string[]).filter((x) => typeof x === "string") : []);
+    return {
+      examName: subject.exam.name,
+      examSlug: subject.exam.slug,
+      subjectName: subject.name,
+      chapters: subject.chapters.map<PublicChapter>((c) => ({
+        slug: c.slug,
+        name: c.name,
+        priority: c.priority,
+        weightage: weightageLabel(c.pyqTrend),
+        importance: c.importance,
+        pattern: (c.pyqTrend as { pattern?: string } | null)?.pattern ?? null,
+        mustKnow: arr(c.mustKnow),
+        questionPatterns: arr(c.questionPatterns),
+        ncertLinks: Array.isArray(c.ncertLinks) ? (c.ncertLinks as unknown as { title: string; url: string }[]) : [],
+        topics: c.topics,
+      })),
+    };
+  },
+  ["public-subject-syllabus-v1"],
+  { revalidate: 3600, tags: ["syllabus"] }
+);
