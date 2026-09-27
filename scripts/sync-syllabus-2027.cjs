@@ -588,6 +588,47 @@ const JEE = {
   ],
 };
 
+// JEE chapter → NCERT PDFs (Class 11 + 12). Every code was checked against
+// the chapter title inside the actual ncert.nic.in PDF (2026 edition).
+// p-Block has no current NCERT chapter (rationalised out), so it stays empty.
+const JEE_NCERT = {
+  physics: {
+    "units-and-measurements": [["keph101", "Units and Measurement (Class 11)"]],
+    kinematics: [["keph102", "Motion in a Straight Line (Class 11)"], ["keph103", "Motion in a Plane (Class 11)"]],
+    "laws-of-motion": [["keph104", "Laws of Motion (Class 11)"]],
+    "work-energy-and-power": [["keph105", "Work, Energy and Power (Class 11)"]],
+    "rotational-motion-system-of-particles": [["keph106", "Systems of Particles and Rotational Motion (Class 11)"]],
+    gravitation: [["keph107", "Gravitation (Class 11)"]],
+    "mechanical-properties-of-solids-fluids": [["keph201", "Mechanical Properties of Solids (Class 11)"], ["keph202", "Mechanical Properties of Fluids (Class 11)"]],
+    thermodynamics: [["keph204", "Thermodynamics (Class 11)"]],
+    "kinetic-theory-of-gases": [["keph205", "Kinetic Theory (Class 11)"]],
+    "oscillations-and-waves": [["keph206", "Oscillations (Class 11)"], ["keph207", "Waves (Class 11)"]],
+  },
+  chemistry: {
+    "some-basic-concepts-in-chemistry": [["kech101", "Some Basic Concepts of Chemistry (Class 11)"]],
+    "atomic-structure": [["kech102", "Structure of Atom (Class 11)"]],
+    "classification-of-elements-periodicity": [["kech103", "Classification of Elements and Periodicity in Properties (Class 11)"]],
+    "chemical-bonding-and-molecular-structure": [["kech104", "Chemical Bonding and Molecular Structure (Class 11)"]],
+    "chemical-thermodynamics": [["kech105", "Thermodynamics (Class 11)"]],
+    "equilibrium-chemical-ionic": [["kech106", "Equilibrium (Class 11)"]],
+    "redox-reactions-and-electrochemistry": [["kech201", "Redox Reactions (Class 11)"], ["lech102", "Electrochemistry"]],
+    "purification-characterisation-basic-principles-of-organic-chemistry-goc": [["kech202", "Organic Chemistry – Some Basic Principles and Techniques (Class 11)"]],
+    hydrocarbons: [["kech203", "Hydrocarbons (Class 11)"]],
+  },
+  mathematics: {
+    "sets-relations-and-functions": [["kemh101", "Sets (Class 11)"], ["kemh102", "Relations and Functions (Class 11)"], ["lemh101", "Relations and Functions"]],
+    "complex-numbers-and-quadratic-equations": [["kemh104", "Complex Numbers and Quadratic Equations (Class 11)"]],
+    "permutations-and-combinations": [["kemh106", "Permutations and Combinations (Class 11)"]],
+    "binomial-theorem": [["kemh107", "Binomial Theorem (Class 11)"]],
+    "sequence-and-series": [["kemh108", "Sequences and Series (Class 11)"]],
+    "limits-continuity-differentiability-applications-of-derivatives": [["kemh112", "Limits and Derivatives (Class 11)"], ["lemh105", "Continuity and Differentiability"], ["lemh106", "Application of Derivatives"]],
+    "coordinate-geometry-straight-lines-circle-parabola-ellipse-hyperbola": [["kemh109", "Straight Lines (Class 11)"], ["kemh110", "Conic Sections (Class 11)"]],
+    "three-dimensional-geometry": [["kemh111", "Introduction to Three Dimensional Geometry (Class 11)"], ["lemh205", "Three Dimensional Geometry"]],
+    "statistics-and-probability": [["kemh113", "Statistics (Class 11)"], ["kemh114", "Probability (Class 11)"], ["lemh207", "Probability"]],
+    "trigonometry-ratios-identities-equations": [["kemh103", "Trigonometric Functions (Class 11)"], ["lemh102", "Inverse Trigonometric Functions"]],
+  },
+};
+
 // ---------------------------------------------------------------------------
 const log = [];
 const note = (s) => log.push(s);
@@ -732,9 +773,26 @@ async function syncJee() {
   }
 }
 
+async function syncJeeNcert() {
+  const exam = await prisma.exam.findUniqueOrThrow({ where: { slug: "jee-main" } });
+  for (const [subjectSlug, chapters] of Object.entries(JEE_NCERT)) {
+    const subject = await prisma.subject.findUniqueOrThrow({ where: { examId_slug: { examId: exam.id, slug: subjectSlug } } });
+    for (const [slug, links] of Object.entries(chapters)) {
+      note(`JEE ncert ${slug}: ${links.map((l) => l[0]).join(", ")}`);
+      if (DRY) continue;
+      const res = await prisma.chapter.updateMany({
+        where: { subjectId: subject.id, slug },
+        data: { ncertLinks: links.map(([code, title]) => ncert(code, title)) },
+      });
+      if (res.count === 0) note(` ! missing chapter ${slug}`);
+    }
+  }
+}
+
 (async () => {
   await syncRbse();
   await syncJee();
+  await syncJeeNcert();
   console.log(log.join("\n"));
   console.log(DRY ? "\n(dry run — nothing written)" : "\nSyllabus synced.");
   await prisma.$disconnect();

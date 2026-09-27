@@ -10,6 +10,7 @@ import { AddTargetForm } from "@/components/plan/add-target-form";
 import { PlanTopicPicker } from "@/components/plan/plan-topic-picker";
 import { ClearPlanButton } from "@/components/plan/clear-plan-button";
 import { getSyllabusTree } from "@/server/queries/syllabus";
+import { ncertLinksForTopic } from "@/lib/ncert";
 import type { SwapOption } from "@/components/plan/swap-topic-button";
 import type { NcertLink } from "@/components/dashboard/target-item-row";
 import { Bot, ArrowRight, ListChecks, Target } from "lucide-react";
@@ -48,7 +49,8 @@ export default async function PlanPage() {
       );
       for (const chapter of subject.chapters) {
         for (const t of chapter.topics) {
-          ncertByTopic.set(t.id, chapter.ncertLinks);
+          // Only the NCERT chapter this topic is actually in (combined chapters span 2+ PDFs).
+          ncertByTopic.set(t.id, ncertLinksForTopic(t.name, chapter.ncertLinks));
           swapByTopic.set(t.id, subjectTopics);
         }
       }

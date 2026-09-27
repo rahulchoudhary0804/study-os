@@ -14,6 +14,8 @@ import { TopicInsight } from "@/components/topic/topic-insight";
 import { StudyTimer } from "@/components/timer/study-timer";
 import { format } from "date-fns";
 import { RobotCue } from "@/components/study-robot/robot-cue";
+import { ncertLinksForTopic, type NcertLink } from "@/lib/ncert";
+import { BookOpen } from "lucide-react";
 
 function JsonList({ value, empty = "None listed" }: { value: unknown; empty?: string }) {
   const arr = Array.isArray(value) ? (value as string[]) : [];
@@ -62,6 +64,10 @@ export default async function TopicPage({
       ? Math.round(timedAttempts.reduce((s, a) => s + (a.timeTakenSeconds ?? 0), 0) / timedAttempts.length)
       : null;
 
+  const ncertLinks = ncertLinksForTopic(
+    topic.name,
+    Array.isArray(topic.chapter.ncertLinks) ? (topic.chapter.ncertLinks as unknown as NcertLink[]) : []
+  );
   const revision = topic.revisions[0];
   const status = topic.progress[0]?.status ?? "NOT_STARTED";
 
@@ -91,8 +97,19 @@ export default async function TopicPage({
           <h1 className="text-2xl font-semibold tracking-tight">{topic.name}</h1>
           <PriorityBadge priority={topic.priority} />
         </div>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <ProgressSelector topicId={topic.id} initialStatus={status} />
+          {ncertLinks.map((l) => (
+            <a
+              key={l.url}
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border-2 border-border px-2.5 h-8 text-xs font-medium shadow-nb-sm hover:bg-muted"
+            >
+              <BookOpen className="size-3.5 text-blue-500" /> NCERT: {l.title}
+            </a>
+          ))}
         </div>
       </div>
 
